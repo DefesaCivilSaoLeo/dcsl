@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { FileText, Search, BarChart3, Plus, Calendar, Users, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -18,9 +17,9 @@ const Dashboard = ({ onNavigate }) => {
 
   useEffect(() => {
     loadDashboardData()
-  }, [loadDashboardData])
+  }, [])
 
-  const loadDashboardData = useCallback(async () => {
+  const loadDashboardData = async () => {
     try {
       const hoje = new Date()
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
@@ -79,21 +78,18 @@ const Dashboard = ({ onNavigate }) => {
     {
       title: 'Novo Boletim',
       description: 'Criar um novo boletim de atendimento',
-      icon: Plus,
       href: 'new-boletim',
       color: 'bg-blue-500'
     },
     {
       title: 'Consultar Boletins',
       description: 'Buscar e visualizar boletins existentes',
-      icon: Search,
       href: 'boletins',
       color: 'bg-green-500'
     },
     {
       title: 'Relatórios',
       description: 'Gerar relatórios gerenciais',
-      icon: BarChart3,
       href: 'relatorios',
       color: 'bg-purple-500'
     }
@@ -132,9 +128,6 @@ const Dashboard = ({ onNavigate }) => {
           <CardContent className="p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <FileText className="h-8 w-8 text-blue-500" />
-              </div>
-              <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total de Boletins</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalBoletins}</p>
               </div>
@@ -146,9 +139,6 @@ const Dashboard = ({ onNavigate }) => {
           <CardContent className="p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Calendar className="h-8 w-8 text-green-500" />
-              </div>
-              <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Hoje</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.boletinsHoje}</p>
               </div>
@@ -160,9 +150,6 @@ const Dashboard = ({ onNavigate }) => {
           <CardContent className="p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <BarChart3 className="h-8 w-8 text-purple-500" />
-              </div>
-              <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Este Mês</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.boletinsMes}</p>
               </div>
@@ -174,9 +161,6 @@ const Dashboard = ({ onNavigate }) => {
           <CardContent className="p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <AlertTriangle className="h-8 w-8 text-orange-500" />
-              </div>
-              <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Este Ano</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.boletinsAno}</p>
               </div>
@@ -194,7 +178,7 @@ const Dashboard = ({ onNavigate }) => {
               <CardContent className="p-6">
                 <div className="flex items-center">
                   <div className={`flex-shrink-0 p-3 rounded-lg ${action.color}`}>
-                    <action.icon className="h-6 w-6 text-white" />
+                    <span>{action.title.charAt(0)}</span>
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-medium text-gray-900">{action.title}</h3>

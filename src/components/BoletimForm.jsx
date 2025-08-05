@@ -12,7 +12,6 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Alert, AlertDescription } from './ui/alert'
 import { Separator } from './ui/separator'
-import { CalendarIcon, Upload, X, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { boletinsAPI, configAPI, fotosAPI } from '../lib/api'
@@ -300,8 +299,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
       {/* Alertas */}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>Erro: {error}</AlertDescription>
         </Alert>
       )}
 

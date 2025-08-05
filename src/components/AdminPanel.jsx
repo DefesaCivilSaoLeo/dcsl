@@ -4,22 +4,9 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
-import { Alert, AlertDescription } from './ui/alert'
+import { AlertDescription } from './ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Switch } from './ui/switch'
-import { 
-  Users, 
-  Settings, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Save,
-  AlertCircle,
-  CheckCircle,
-  Building,
-  ArrowRight,
-  UserCheck
-} from 'lucide-react'
 import { adminAPI, configAPI } from '../lib/api'
 import { useAuth } from '../hooks/useAuth.jsx'
 
@@ -192,10 +179,7 @@ const AdminPanel = () => {
     return (
       <div className="max-w-4xl mx-auto">
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Acesso negado. Apenas administradores podem acessar esta página.
-          </AlertDescription>
+          <AlertDescription>Acesso negado. Apenas administradores podem acessar esta página.</AlertDescription>
         </Alert>
       </div>
     )
@@ -212,14 +196,12 @@ const AdminPanel = () => {
       {/* Alertas */}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
         <Alert>
-          <CheckCircle className="h-4 w-4" />
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
@@ -227,11 +209,11 @@ const AdminPanel = () => {
       <Tabs defaultValue="users" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="users">
-            <Users className="h-4 w-4 mr-2" />
+            <span className="mr-2">👥</span>
             Usuários
           </TabsTrigger>
           <TabsTrigger value="config">
-            <Settings className="h-4 w-4 mr-2" />
+            <span className="mr-2">⚙️</span>
             Configurações
           </TabsTrigger>
         </TabsList>
@@ -294,7 +276,7 @@ const AdminPanel = () => {
                               onClick={() => handleDeleteUser(userItem.id)}
                               className="text-red-600 hover:text-red-700"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <span>🗑️</span>
                             </Button>
                           </div>
                         )}
@@ -326,7 +308,7 @@ const AdminPanel = () => {
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateTipoConstrucao()}
                 />
                 <Button onClick={handleCreateTipoConstrucao}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <span>➕</span>
                   Adicionar
                 </Button>
               </div>
@@ -341,7 +323,7 @@ const AdminPanel = () => {
                       onClick={() => handleDeleteTipoConstrucao(tipo.id)}
                       className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <span>🗑️</span>
                     </Button>
                   </div>
                 ))}
@@ -366,7 +348,7 @@ const AdminPanel = () => {
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateEncaminhamento()}
                 />
                 <Button onClick={handleCreateEncaminhamento}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <span>➕</span>
                   Adicionar
                 </Button>
               </div>
@@ -381,7 +363,7 @@ const AdminPanel = () => {
                       onClick={() => handleDeleteEncaminhamento(enc.id)}
                       className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <span>🗑️</span>
                     </Button>
                   </div>
                 ))}
@@ -410,7 +392,7 @@ const AdminPanel = () => {
                   onChange={(e) => setNewResponsavel(prev => ({ ...prev, cargo: e.target.value }))}
                 />
                 <Button onClick={handleCreateResponsavel}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <span>➕</span>
                   Adicionar
                 </Button>
               </div>
@@ -428,7 +410,7 @@ const AdminPanel = () => {
                       onClick={() => handleDeleteResponsavel(resp.id)}
                       className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <span>🗑️</span>
                     </Button>
                   </div>
                 ))}

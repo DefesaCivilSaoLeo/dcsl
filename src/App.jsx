@@ -43,15 +43,15 @@ const AppContent = () => {
     setCurrentView('new-boletim')
   }
 
-  const handleBackToList = useCallback(() => {
+  const handleBackToList = () => {
     setCurrentView('boletins')
     setSelectedBoletimId(null)
-  }, [])
+  }
 
-  const handleSaveBoletim = useCallback((boletim) => {
-    setCurrentView("boletins")
+  const handleSaveBoletim = (boletim) => {
+    setCurrentView('boletins')
     setSelectedBoletimId(null)
-  }, [])
+  }
 
   const renderContent = () => {
     switch (currentView) {
@@ -120,6 +120,5 @@ function App() {
 }
 
 export default App
-
 
 
