@@ -6,7 +6,7 @@ import { FileText, Search, BarChart3, Plus, Calendar, Users, AlertTriangle } fro
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-const Dashboard = () => {
+const Dashboard = ({ onNavigate }) => {
   const [stats, setStats] = useState({
     totalBoletins: 0,
     boletinsHoje: 0,
@@ -201,7 +201,7 @@ const Dashboard = () => {
                     <p className="text-sm text-gray-600">{action.description}</p>
                   </div>
                 </div>
-                <Button className="w-full mt-4" variant="outline">
+                <Button className="w-full mt-4" variant="outline" onClick={() => onNavigate(action.key)}>
                   Acessar
                 </Button>
               </CardContent>
