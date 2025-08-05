@@ -18,9 +18,9 @@ const Dashboard = ({ onNavigate }) => {
 
   useEffect(() => {
     loadDashboardData()
-  }, [])
+  }, [loadDashboardData])
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       const hoje = new Date()
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
