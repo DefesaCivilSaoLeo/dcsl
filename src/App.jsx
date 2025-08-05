@@ -56,7 +56,7 @@ const AppContent = () => {
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard />
+        return <Dashboard onNavigate={setCurrentView} />
       
       case 'boletins':
         return (
@@ -100,7 +100,7 @@ const AppContent = () => {
         return <AdminPanel />
       
       default:
-        return <Dashboard />
+        return <Dashboard onNavigate={setCurrentView} />
     }
   }
 
@@ -120,5 +120,6 @@ function App() {
 }
 
 export default App
+
 
 
