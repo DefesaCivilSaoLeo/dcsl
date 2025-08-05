@@ -80,21 +80,21 @@ const Dashboard = ({ onNavigate }) => {
       title: 'Novo Boletim',
       description: 'Criar um novo boletim de atendimento',
       icon: Plus,
-      href: '/boletim/novo',
+      href: 'new-boletim',
       color: 'bg-blue-500'
     },
     {
       title: 'Consultar Boletins',
       description: 'Buscar e visualizar boletins existentes',
       icon: Search,
-      href: '/boletins',
+      href: 'boletins',
       color: 'bg-green-500'
     },
     {
       title: 'Relatórios',
       description: 'Gerar relatórios gerenciais',
       icon: BarChart3,
-      href: '/relatorios',
+      href: 'relatorios',
       color: 'bg-purple-500'
     }
   ]
@@ -201,7 +201,7 @@ const Dashboard = ({ onNavigate }) => {
                     <p className="text-sm text-gray-600">{action.description}</p>
                   </div>
                 </div>
-                <Button className="w-full mt-4" variant="outline" onClick={() => onNavigate(action.key)}>
+                <Button className="w-full mt-4" variant="outline" onClick={() => onNavigate(action.href)}>
                   Acessar
                 </Button>
               </CardContent>
