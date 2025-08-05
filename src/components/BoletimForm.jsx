@@ -240,32 +240,18 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
     setSuccess('')
 
     try {
-      // Limpar campos UUID vazios ou inválidos
-      const cleanedData = { ...data }
-      
-      // Campos UUID que devem ser null se estiverem vazios
-      const uuidFields = ['tipo_construcao_id', 'responsavel1_id', 'responsavel2_id']
-      uuidFields.forEach(field => {
-        if (!cleanedData[field] || cleanedData[field] === '') {
-          cleanedData[field] = null
-        }
-      })
-
-      // Remover campos que não devem ser enviados para o banco
-      delete cleanedData.encaminhamentos
-
       let boletim
 
       if (boletimId) {
         // Atualizar boletim existente
         boletim = await boletinsAPI.update(boletimId, {
-          ...cleanedData,
+          ...data,
           created_by: user.id
         })
       } else {
         // Criar novo boletim
         boletim = await boletinsAPI.create({
-          ...cleanedData,
+          ...data,
           numero: numeroBoletim,
           ano: anoBoletim,
           created_by: user.id
@@ -497,7 +483,10 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
           <CardContent>
             <div>
               <Label htmlFor="tipo_construcao_id">Tipo</Label>
-              <Select onValueChange={(value) => setValue('tipo_construcao_id', value)}>
+              <Select
+                onValueChange={(value) => setValue('tipo_construcao_id', value)}
+                value={watch('tipo_construcao_id') || ''}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo de construção" />
                 </SelectTrigger>
@@ -507,6 +496,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.tipo_construcao_id && <p className="text-sm text-red-500">{errors.tipo_construcao_id.message}</p>}
             </div>
           </CardContent>
         </Card>
@@ -522,8 +512,8 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
               <Textarea
                 id="diagnostico"
                 {...register('diagnostico')}
-                placeholder="Diagnóstico da situação"
-                rows={3}
+                placeholder="Descreva o diagnóstico da situação"
+                rows={4}
               />
             </div>
           </CardContent>
@@ -535,26 +525,25 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
             <CardTitle>6. Encaminhamento</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              {encaminhamentos.map(encaminhamento => (
-                <div key={encaminhamento.id} className="flex items-center space-x-2">
+            <Label>Encaminhamentos</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {encaminhamentos.map(enc => (
+                <div key={enc.id} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`enc_${encaminhamento.id}`}
-                    checked={watchedEncaminhamentos.includes(encaminhamento.id)}
-                    onCheckedChange={(checked) => handleEncaminhamentoChange(encaminhamento.id, checked)}
+                    id={`encaminhamento-${enc.id}`}
+                    checked={watchedEncaminhamentos.includes(enc.id)}
+                    onCheckedChange={(checked) => handleEncaminhamentoChange(enc.id, checked)}
                   />
-                  <Label htmlFor={`enc_${encaminhamento.id}`}>{encaminhamento.nome}</Label>
+                  <Label htmlFor={`encaminhamento-${enc.id}`}>{enc.nome}</Label>
                 </div>
               ))}
             </div>
-
-            <div>
+            <div className="mt-4">
               <Label htmlFor="outros_encaminhamento">Outros</Label>
-              <Textarea
+              <Input
                 id="outros_encaminhamento"
                 {...register('outros_encaminhamento')}
-                placeholder="Outros encaminhamentos não listados acima"
-                rows={2}
+                placeholder="Especifique outros encaminhamentos"
               />
             </div>
           </CardContent>
@@ -567,7 +556,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
           </CardHeader>
           <CardContent>
             <div>
-              <Label htmlFor="data_vistoria">Data *</Label>
+              <Label htmlFor="data_vistoria">Data da Vistoria *</Label>
               <Input
                 id="data_vistoria"
                 type="date"
@@ -584,145 +573,99 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
             <CardTitle>8. Registro Fotográfico</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label>Feito registro?</Label>
-              <RadioGroup
-                value={watchedFeitoRegistro ? 'sim' : 'nao'}
-                onValueChange={(value) => setValue('feito_registro', value === 'sim')}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="sim" id="registro_sim" />
-                  <Label htmlFor="registro_sim">Sim</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="nao" id="registro_nao" />
-                  <Label htmlFor="registro_nao">Não</Label>
-                </div>
-              </RadioGroup>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="feito_registro"
+                checked={watchedFeitoRegistro}
+                onCheckedChange={(checked) => setValue('feito_registro', checked)}
+              />
+              <Label htmlFor="feito_registro">Foi feito registro fotográfico?</Label>
             </div>
 
             {watchedFeitoRegistro && (
               <div className="space-y-4">
-                <Separator />
-                <h4 className="font-medium">10. Registro Fotográfico</h4>
-                
-                <div>
-                  <Label htmlFor="foto_upload">Adicionar Fotos</Label>
-                  <Input
-                    id="foto_upload"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFotoUpload}
-                    disabled={uploadingFoto}
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Máximo 2MB por foto. Formatos: JPG, PNG, WebP
-                  </p>
-                </div>
+                <Label htmlFor="fotos">Upload de Fotos</Label>
+                <Input
+                  id="fotos"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFotoUpload}
+                  disabled={uploadingFoto}
+                />
+                {uploadingFoto && <p className="text-sm text-gray-500">Enviando fotos...</p>}
 
-                {fotos.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {fotos.map((foto) => (
-                      <div key={foto.id} className="relative group">
-                        <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                          {foto.isTemp ? (
-                            <img
-                              src={URL.createObjectURL(foto.file)}
-                              alt={foto.nome_arquivo}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-xs text-gray-500 text-center p-2">
-                                {foto.nome_arquivo}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleRemoveFoto(foto)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {fotos.map((foto, index) => (
+                    <div key={foto.id || index} className="relative group">
+                      <img
+                        src={foto.url_storage ? fotosAPI.getPublicUrl(foto.url_storage) : URL.createObjectURL(foto.file)}
+                        alt={foto.nome_arquivo}
+                        className="w-full h-32 object-cover rounded-md"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleRemoveFoto(foto)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* 9. Responsável pela Vistoria */}
+        {/* 9. Responsáveis */}
         <Card>
           <CardHeader>
-            <CardTitle>9. Responsável pela Vistoria</CardTitle>
+            <CardTitle>9. Responsáveis</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="responsavel1_id">Responsável 1</Label>
-                <Select onValueChange={(value) => setValue('responsavel1_id', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {responsaveis.map(responsavel => (
-                      <SelectItem key={responsavel.id} value={responsavel.id}>
-                        {responsavel.nome} - {responsavel.cargo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="responsavel2_id">Responsável 2</Label>
-                <Select onValueChange={(value) => setValue('responsavel2_id', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {responsaveis.map(responsavel => (
-                      <SelectItem key={responsavel.id} value={responsavel.id}>
-                        {responsavel.nome} - {responsavel.cargo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor="responsavel1_id">Responsável 1</Label>
+              <Select
+                onValueChange={(value) => setValue('responsavel1_id', value)}
+                value={watch('responsavel1_id') || ''}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  {responsaveis.map(resp => (
+                    <SelectItem key={resp.id} value={resp.id}>{resp.nome} ({resp.cargo})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="text-center text-sm text-gray-500 mt-6">
-              <p>Espaço para assinatura dos responsáveis</p>
-              <div className="flex justify-between mt-4">
-                <div className="text-center">
-                  <div className="border-t border-gray-300 w-48 mx-auto"></div>
-                  <p className="mt-1">Responsável 1</p>
-                </div>
-                <div className="text-center">
-                  <div className="border-t border-gray-300 w-48 mx-auto"></div>
-                  <p className="mt-1">Responsável 2</p>
-                </div>
-              </div>
+            <div>
+              <Label htmlFor="responsavel2_id">Responsável 2</Label>
+              <Select
+                onValueChange={(value) => setValue('responsavel2_id', value)}
+                value={watch('responsavel2_id') || ''}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  {responsaveis.map(resp => (
+                    <SelectItem key={resp.id} value={resp.id}>{resp.nome} ({resp.cargo})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Botões de Ação */}
         <div className="flex justify-end space-x-4">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancelar
-            </Button>
-          )}
+          <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+            Cancelar
+          </Button>
           <Button type="submit" disabled={loading}>
             {loading ? 'Salvando...' : (boletimId ? 'Atualizar Boletim' : 'Criar Boletim')}
           </Button>
@@ -733,4 +676,5 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 }
 
 export default BoletimForm
+
 
