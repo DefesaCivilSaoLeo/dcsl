@@ -62,8 +62,8 @@ const boletimSchema = z.object({
   feito_registro: z.boolean().default(false),
 
   // Responsáveis
-  responsavel1_id: z.string().optional(),
-  responsavel2_id: z.string().optional()
+  responsavel1_id: z.string().nullable().optional(),
+  responsavel2_id: z.string().nullable().optional()
 })
 
 const BoletimForm = ({ boletimId, onSave, onCancel }) => {
@@ -240,32 +240,18 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
     setSuccess('')
 
     try {
-      // Limpar campos UUID vazios ou inválidos
-      const cleanedData = { ...data }
-      
-      // Campos UUID que devem ser null se estiverem vazios
-      const uuidFields = ['tipo_construcao_id', 'responsavel1_id', 'responsavel2_id']
-      uuidFields.forEach(field => {
-        if (!cleanedData[field] || cleanedData[field] === '') {
-          cleanedData[field] = null
-        }
-      })
-
-      // Remover campos que não devem ser enviados para o banco
-      delete cleanedData.encaminhamentos
-
       let boletim
 
       if (boletimId) {
         // Atualizar boletim existente
         boletim = await boletinsAPI.update(boletimId, {
-          ...cleanedData,
+          ...data,
           created_by: user.id
         })
       } else {
         // Criar novo boletim
         boletim = await boletinsAPI.create({
-          ...cleanedData,
+          ...data,
           numero: numeroBoletim,
           ano: anoBoletim,
           created_by: user.id
