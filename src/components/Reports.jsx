@@ -1,23 +1,16 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
+import { format, subMonths } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Alert, AlertDescription } from './ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { 
-  BarChart3, 
-  Download, 
-  Calendar, 
-  FileText, 
-  TrendingUp,
-  AlertCircle,
-  Filter
-} from 'lucide-react'
-import { format, subDays, subMonths, subYears } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { Alert, AlertDescription } from './ui/alert'
+import { FileText, TrendingUp, BarChart3, Download, AlertCircle } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { relatoriosAPI } from '../lib/api'
+import { supabase } from '../lib/supabase'
 
 const Reports = () => {
   const [loading, setLoading] = useState(false)
@@ -29,10 +22,22 @@ const Reports = () => {
   })
   const [reportData, setReportData] = useState(null)
   const [statistics, setStatistics] = useState(null)
+  
+  // Estados para filtros específicos
+  const [specificFilter, setSpecificFilter] = useState('todos')
+  const [tiposConstrucao, setTiposConstrucao] = useState([])
+  const [responsaveis, setResponsaveis] = useState([])
+  const [encaminhamentos, setEncaminhamentos] = useState([])
 
   useEffect(() => {
     loadStatistics()
+    loadFilterOptions()
   }, [])
+
+  useEffect(() => {
+    // Reset do filtro específico quando muda o tipo de relatório
+    setSpecificFilter('todos')
+  }, [reportType])
 
   const loadStatistics = async () => {
     try {
@@ -43,16 +48,71 @@ const Reports = () => {
     }
   }
 
+  const loadFilterOptions = async () => {
+    try {
+      // Carregar tipos de construção
+      const { data: tipos, error: tiposError } = await supabase
+        .from('tipos_construcao')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome')
+      
+      if (!tiposError) setTiposConstrucao(tipos || [])
+
+      // Carregar responsáveis
+      const { data: resp, error: respError } = await supabase
+        .from('responsaveis')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome')
+      
+      if (!respError) setResponsaveis(resp || [])
+
+      // Carregar encaminhamentos
+      const { data: enc, error: encError } = await supabase
+        .from('encaminhamentos')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome')
+      
+      if (!encError) setEncaminhamentos(enc || [])
+    } catch (error) {
+      console.error('Erro ao carregar opções de filtro:', error)
+    }
+  }
+
   const generateReport = async () => {
     setLoading(true)
     setError('')
 
     try {
       let data
-      
+      const { inicio, fim } = dateRange
+
       switch (reportType) {
         case 'periodo':
-          data = await relatoriosAPI.getBoletinsPorPeriodo(dateRange.inicio, dateRange.fim)
+          data = await relatoriosAPI.getBoletinsPorPeriodo(inicio, fim)
+          break
+        case 'tipo':
+          if (specificFilter === 'todos') {
+            data = await relatoriosAPI.getBoletinsPorTipo(inicio, fim)
+          } else {
+            data = await relatoriosAPI.getBoletinsPorTipoEspecifico(inicio, fim, specificFilter)
+          }
+          break
+        case 'responsavel':
+          if (specificFilter === 'todos') {
+            data = await relatoriosAPI.getBoletinsPorResponsavel(inicio, fim)
+          } else {
+            data = await relatoriosAPI.getBoletinsPorResponsavelEspecifico(inicio, fim, specificFilter)
+          }
+          break
+        case 'encaminhamento':
+          if (specificFilter === 'todos') {
+            data = await relatoriosAPI.getBoletinsPorEncaminhamento(inicio, fim)
+          } else {
+            data = await relatoriosAPI.getBoletinsPorEncaminhamentoEspecifico(inicio, fim, specificFilter)
+          }
           break
         default:
           throw new Error('Tipo de relatório não suportado')
@@ -61,20 +121,174 @@ const Reports = () => {
       setReportData(data)
     } catch (error) {
       console.error('Erro ao gerar relatório:', error)
-      setError('Erro ao gerar relatório')
+      setError('Erro ao gerar relatório: ' + error.message)
     } finally {
       setLoading(false)
     }
   }
 
   const exportToPDF = () => {
-    // TODO: Implementar exportação para PDF
-    alert('Funcionalidade de exportação será implementada')
+    if (!reportData || reportData.length === 0) {
+      alert('Nenhum dado para exportar')
+      return
+    }
+
+    // Criar conteúdo HTML para o PDF
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Relatório - ${reportType}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; text-align: center; }
+            h2 { color: #666; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .summary { display: flex; justify-content: space-around; margin: 20px 0; }
+            .summary-item { text-align: center; }
+            .summary-number { font-size: 24px; font-weight: bold; color: #3B82F6; }
+          </style>
+        </head>
+        <body>
+          <h1>Relatório de Boletins - ${getReportTitle()}</h1>
+          <p><strong>Período:</strong> ${format(new Date(dateRange.inicio), 'dd/MM/yyyy', { locale: ptBR })} até ${format(new Date(dateRange.fim), 'dd/MM/yyyy', { locale: ptBR })}</p>
+          
+          <h2>Resumo</h2>
+          <div class="summary">
+            <div class="summary-item">
+              <div class="summary-number">${reportData.length}</div>
+              <div>Total de Boletins</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-number">${new Set(reportData.map(b => b.nome_requerente)).size}</div>
+              <div>Requerentes Únicos</div>
+            </div>
+            <div class="summary-item">
+              <div class="summary-number">${reportData.filter(b => b.data_vistoria).length}</div>
+              <div>Com Vistoria Realizada</div>
+            </div>
+          </div>
+
+          <h2>Dados Detalhados</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Boletim</th>
+                <th>Requerente</th>
+                <th>Data Solicitação</th>
+                <th>Data Vistoria</th>
+                ${getAdditionalColumns()}
+              </tr>
+            </thead>
+            <tbody>
+              ${reportData.map(boletim => `
+                <tr>
+                  <td>${boletim.numero}/${boletim.ano}</td>
+                  <td>${boletim.nome_requerente}</td>
+                  <td>${format(new Date(boletim.data_solicitacao), 'dd/MM/yyyy', { locale: ptBR })}</td>
+                  <td>${boletim.data_vistoria ? format(new Date(boletim.data_vistoria), 'dd/MM/yyyy', { locale: ptBR }) : 'Não realizada'}</td>
+                  ${getAdditionalColumnData(boletim)}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `
+
+    // Abrir nova janela e imprimir
+    const printWindow = window.open('', '_blank')
+    printWindow.document.write(htmlContent)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
   }
 
   const exportToExcel = () => {
-    // TODO: Implementar exportação para Excel
-    alert('Funcionalidade de exportação será implementada')
+    if (!reportData || reportData.length === 0) {
+      alert('Nenhum dado para exportar')
+      return
+    }
+
+    // Preparar dados para CSV (compatível com Excel)
+    const headers = ['Boletim', 'Requerente', 'Data Solicitação', 'Data Vistoria']
+    
+    // Adicionar colunas específicas do tipo de relatório
+    if (reportType === 'tipo') {
+      headers.push('Tipo de Construção')
+    } else if (reportType === 'responsavel') {
+      headers.push('Responsável 1', 'Responsável 2')
+    } else if (reportType === 'encaminhamento') {
+      headers.push('Encaminhamentos')
+    }
+
+    const csvContent = [
+      headers.join(','),
+      ...reportData.map(boletim => {
+        const row = [
+          `"${boletim.numero}/${boletim.ano}"`,
+          `"${boletim.nome_requerente}"`,
+          `"${format(new Date(boletim.data_solicitacao), 'dd/MM/yyyy', { locale: ptBR })}"`,
+          `"${boletim.data_vistoria ? format(new Date(boletim.data_vistoria), 'dd/MM/yyyy', { locale: ptBR }) : 'Não realizada'}"`
+        ]
+
+        // Adicionar dados específicos do tipo de relatório
+        if (reportType === 'tipo') {
+          row.push(`"${boletim.tipos_construcao?.nome || 'N/A'}"`)
+        } else if (reportType === 'responsavel') {
+          row.push(`"${boletim.responsavel1?.nome || 'N/A'}"`)
+          row.push(`"${boletim.responsavel2?.nome || 'N/A'}"`)
+        } else if (reportType === 'encaminhamento') {
+          const encaminhamentos = boletim.boletim_encaminhamentos?.map(be => be.encaminhamentos?.nome).filter(Boolean).join('; ') || 'N/A'
+          row.push(`"${encaminhamentos}"`)
+        }
+
+        return row.join(',')
+      })
+    ].join('\n')
+
+    // Criar e baixar arquivo
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `relatorio_${reportType}_${format(new Date(), 'yyyy-MM-dd')}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const getReportTitle = () => {
+    switch (reportType) {
+      case 'periodo': return 'Por Período'
+      case 'tipo': return 'Por Tipo de Construção'
+      case 'responsavel': return 'Por Responsável'
+      case 'encaminhamento': return 'Por Encaminhamento'
+      default: return 'Relatório'
+    }
+  }
+
+  const getAdditionalColumns = () => {
+    switch (reportType) {
+      case 'tipo': return '<th>Tipo de Construção</th>'
+      case 'responsavel': return '<th>Responsável 1</th><th>Responsável 2</th>'
+      case 'encaminhamento': return '<th>Encaminhamentos</th>'
+      default: return '<th>Tipo de Construção</th>'
+    }
+  }
+
+  const getAdditionalColumnData = (boletim) => {
+    switch (reportType) {
+      case 'tipo': return `<td>${boletim.tipos_construcao?.nome || 'N/A'}</td>`
+      case 'responsavel': return `<td>${boletim.responsavel1?.nome || 'N/A'}</td><td>${boletim.responsavel2?.nome || 'N/A'}</td>`
+      case 'encaminhamento': {
+        const encaminhamentos = boletim.boletim_encaminhamentos?.map(be => be.encaminhamentos?.nome).filter(Boolean).join(', ') || 'N/A'
+        return `<td>${encaminhamentos}</td>`
+      }
+      default: return `<td>${boletim.tipos_construcao?.nome || 'N/A'}</td>`
+    }
   }
 
   const setQuickDateRange = (type) => {
@@ -206,7 +420,7 @@ const Reports = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="report_type">Tipo de Relatório</Label>
               <Select value={reportType} onValueChange={setReportType}>
@@ -217,9 +431,38 @@ const Reports = () => {
                   <SelectItem value="periodo">Boletins por Período</SelectItem>
                   <SelectItem value="tipo">Por Tipo de Construção</SelectItem>
                   <SelectItem value="responsavel">Por Responsável</SelectItem>
+                  <SelectItem value="encaminhamento">Por Encaminhamento</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Filtro específico - aparece apenas para tipos que precisam */}
+            {(reportType === 'tipo' || reportType === 'responsavel' || reportType === 'encaminhamento') && (
+              <div>
+                <Label htmlFor="specific_filter">
+                  {reportType === 'tipo' && 'Tipo de Construção'}
+                  {reportType === 'responsavel' && 'Responsável'}
+                  {reportType === 'encaminhamento' && 'Encaminhamento'}
+                </Label>
+                <Select value={specificFilter} onValueChange={setSpecificFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {reportType === 'tipo' && tiposConstrucao.map(tipo => (
+                      <SelectItem key={tipo.id} value={tipo.id.toString()}>{tipo.nome}</SelectItem>
+                    ))}
+                    {reportType === 'responsavel' && responsaveis.map(resp => (
+                      <SelectItem key={resp.id} value={resp.id.toString()}>{resp.nome}</SelectItem>
+                    ))}
+                    {reportType === 'encaminhamento' && encaminhamentos.map(enc => (
+                      <SelectItem key={enc.id} value={enc.id.toString()}>{enc.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="data_inicio">Data Início</Label>
@@ -308,7 +551,10 @@ const Reports = () => {
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-green-600">
-                    {Math.round(reportData.length / ((new Date(dateRange.fim) - new Date(dateRange.inicio)) / (1000 * 60 * 60 * 24)))}
+                    {(() => {
+                      const days = Math.max(1, Math.ceil((new Date(dateRange.fim) - new Date(dateRange.inicio)) / (1000 * 60 * 60 * 24)))
+                      return Math.round(reportData.length / days)
+                    })()}
                   </p>
                   <p className="text-sm text-gray-600">Média por Dia</p>
                 </div>
@@ -320,9 +566,9 @@ const Reports = () => {
                 </div>
                 <div className="text-center">
                   <p className="text-2xl font-bold text-orange-600">
-                    {reportData.filter(b => b.feito_registro).length}
+                    {reportData.filter(b => b.data_vistoria).length}
                   </p>
-                  <p className="text-sm text-gray-600">Com Registro Fotográfico</p>
+                  <p className="text-sm text-gray-600">Com Vistoria Realizada</p>
                 </div>
               </div>
             </CardContent>
@@ -391,8 +637,15 @@ const Reports = () => {
                       <th className="text-left p-2">Requerente</th>
                       <th className="text-left p-2">Data Solicitação</th>
                       <th className="text-left p-2">Data Vistoria</th>
-                      <th className="text-left p-2">Tipo Construção</th>
-                      <th className="text-left p-2">Registro Foto</th>
+                      {reportType === 'tipo' && <th className="text-left p-2">Tipo Construção</th>}
+                      {reportType === 'responsavel' && (
+                        <>
+                          <th className="text-left p-2">Responsável 1</th>
+                          <th className="text-left p-2">Responsável 2</th>
+                        </>
+                      )}
+                      {reportType === 'encaminhamento' && <th className="text-left p-2">Encaminhamentos</th>}
+                      {reportType === 'periodo' && <th className="text-left p-2">Tipo Construção</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -404,16 +657,28 @@ const Reports = () => {
                           {format(new Date(boletim.data_solicitacao), 'dd/MM/yyyy', { locale: ptBR })}
                         </td>
                         <td className="p-2">
-                          {format(new Date(boletim.data_vistoria), 'dd/MM/yyyy', { locale: ptBR })}
+                          {boletim.data_vistoria ? 
+                            format(new Date(boletim.data_vistoria), 'dd/MM/yyyy', { locale: ptBR }) : 
+                            'Não realizada'
+                          }
                         </td>
-                        <td className="p-2">{boletim.tipos_construcao?.nome || 'N/A'}</td>
-                        <td className="p-2">
-                          {boletim.feito_registro ? (
-                            <span className="text-green-600">Sim</span>
-                          ) : (
-                            <span className="text-red-600">Não</span>
-                          )}
-                        </td>
+                        {reportType === 'tipo' && (
+                          <td className="p-2">{boletim.tipos_construcao?.nome || 'N/A'}</td>
+                        )}
+                        {reportType === 'responsavel' && (
+                          <>
+                            <td className="p-2">{boletim.responsavel1?.nome || 'N/A'}</td>
+                            <td className="p-2">{boletim.responsavel2?.nome || 'N/A'}</td>
+                          </>
+                        )}
+                        {reportType === 'encaminhamento' && (
+                          <td className="p-2">
+                            {boletim.boletim_encaminhamentos?.map(be => be.encaminhamentos?.nome).filter(Boolean).join(', ') || 'N/A'}
+                          </td>
+                        )}
+                        {reportType === 'periodo' && (
+                          <td className="p-2">{boletim.tipos_construcao?.nome || 'N/A'}</td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

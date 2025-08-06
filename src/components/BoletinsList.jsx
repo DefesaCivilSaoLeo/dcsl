@@ -327,14 +327,6 @@ const BoletinsList = ({ onView, onEdit, onNew }) => {
                       </Button>
                     )}
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {/* TODO: Implementar impressão */}}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-
                     {canDelete(boletim) && (
                       <Button
                         variant="outline"

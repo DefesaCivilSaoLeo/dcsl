@@ -442,14 +442,44 @@ export const adminAPI = {
 
   // Campos obrigatórios
   async updateCampoObrigatorio(campo, obrigatorio) {
-    const { data, error } = await supabase
-      .from('campos_obrigatorios')
-      .upsert([{ campo, obrigatorio }])
-      .select()
-      .single()
+    try {
+      // Primeiro, tentar buscar se já existe
+      const { data: existing, error: selectError } = await supabase
+        .from('campos_obrigatorios')
+        .select('*')
+        .eq('campo', campo)
+        .single()
 
-    if (error) throw error
-    return data
+      if (selectError && selectError.code !== 'PGRST116') {
+        throw selectError
+      }
+
+      if (existing) {
+        // Se existe, fazer update
+        const { data, error } = await supabase
+          .from('campos_obrigatorios')
+          .update({ obrigatorio })
+          .eq('campo', campo)
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      } else {
+        // Se não existe, fazer insert
+        const { data, error } = await supabase
+          .from('campos_obrigatorios')
+          .insert([{ campo, obrigatorio }])
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      }
+    } catch (error) {
+      console.error('Erro em updateCampoObrigatorio:', error)
+      throw error
+    }
   }
 }
 
@@ -477,27 +507,184 @@ export const relatoriosAPI = {
     return data
   },
 
-  // Estatísticas gerais
-  async getEstatisticas() {
-    const { data: total, error: totalError } = await supabase
-      .from('boletins')
-      .select('id', { count: 'exact' })
-
-    if (totalError) throw totalError
-
-    const { data: porTipo, error: tipoError } = await supabase
+  // Relatório por tipo de construção
+  async getBoletinsPorTipo(dataInicio, dataFim) {
+    const { data, error } = await supabase
       .from('boletins')
       .select(`
+        id,
+        numero,
+        ano,
+        nome_requerente,
+        data_solicitacao,
+        data_vistoria,
         tipos_construcao(nome),
-        count:id
+        created_at
       `)
-      .not('tipos_construcao', 'is', null)
+      .gte('data_solicitacao', dataInicio)
+      .lte('data_solicitacao', dataFim)
+      .not('tipo_construcao_id', 'is', null)
+      .order('tipos_construcao(nome)')
 
-    if (tipoError) throw tipoError
+    if (error) throw error
+    return data
+  },
 
-    return {
-      total: total.length,
-      porTipo: porTipo
+  // Relatório por responsável
+  async getBoletinsPorResponsavel(dataInicio, dataFim) {
+    const { data, error } = await supabase
+      .from('boletins')
+      .select(`
+        id,
+        numero,
+        ano,
+        nome_requerente,
+        data_solicitacao,
+        data_vistoria,
+        responsavel1:responsaveis!boletins_responsavel1_id_fkey(nome),
+        responsavel2:responsaveis!boletins_responsavel2_id_fkey(nome),
+        created_at
+      `)
+      .gte('data_solicitacao', dataInicio)
+      .lte('data_solicitacao', dataFim)
+      .order('data_solicitacao')
+
+    if (error) throw error
+    return data
+  },
+
+  // Relatório por encaminhamento
+  async getBoletinsPorEncaminhamento(dataInicio, dataFim) {
+    const { data, error } = await supabase
+      .from('boletins')
+      .select(`
+        id,
+        numero,
+        ano,
+        nome_requerente,
+        data_solicitacao,
+        data_vistoria,
+        boletim_encaminhamentos!inner(
+          encaminhamentos(nome)
+        ),
+        created_at
+      `)
+      .gte('data_solicitacao', dataInicio)
+      .lte('data_solicitacao', dataFim)
+      .order('data_solicitacao')
+
+    if (error) throw error
+    return data
+  },
+
+  // Relatório por tipo específico
+  async getBoletinsPorTipoEspecifico(dataInicio, dataFim, tipoId) {
+    const { data, error } = await supabase
+      .from('boletins')
+      .select(`
+        id,
+        numero,
+        ano,
+        nome_requerente,
+        data_solicitacao,
+        data_vistoria,
+        tipos_construcao!inner(nome),
+        created_at
+      `)
+      .eq('tipo_construcao_id', tipoId)
+      .gte('data_solicitacao', dataInicio)
+      .lte('data_solicitacao', dataFim)
+      .order('data_solicitacao')
+
+    if (error) throw error
+    return data
+  },
+
+  // Relatório por responsável específico
+  async getBoletinsPorResponsavelEspecifico(dataInicio, dataFim, responsavelId) {
+    const { data, error } = await supabase
+      .from('boletins')
+      .select(`
+        id,
+        numero,
+        ano,
+        nome_requerente,
+        data_solicitacao,
+        data_vistoria,
+        responsavel1:responsaveis!boletins_responsavel1_id_fkey(nome),
+        responsavel2:responsaveis!boletins_responsavel2_id_fkey(nome),
+        created_at
+      `)
+      .or(`responsavel1_id.eq.${responsavelId},responsavel2_id.eq.${responsavelId}`)
+      .gte('data_solicitacao', dataInicio)
+      .lte('data_solicitacao', dataFim)
+      .order('data_solicitacao')
+
+    if (error) throw error
+    return data
+  },
+
+  // Relatório por encaminhamento específico
+  async getBoletinsPorEncaminhamentoEspecifico(dataInicio, dataFim, encaminhamentoId) {
+    const { data, error } = await supabase
+      .from('boletins')
+      .select(`
+        id,
+        numero,
+        ano,
+        nome_requerente,
+        data_solicitacao,
+        data_vistoria,
+        boletim_encaminhamentos!inner(
+          encaminhamentos!inner(nome)
+        ),
+        created_at
+      `)
+      .eq('boletim_encaminhamentos.encaminhamento_id', encaminhamentoId)
+      .gte('data_solicitacao', dataInicio)
+      .lte('data_solicitacao', dataFim)
+      .order('data_solicitacao')
+
+    if (error) throw error
+    return data
+  },
+
+  // Estatísticas gerais
+  async getEstatisticas() {
+    try {
+      const { count: total, error: totalError } = await supabase
+        .from('boletins')
+        .select('*', { count: 'exact', head: true })
+
+      if (totalError) throw totalError
+
+      const { data: porTipo, error: tipoError } = await supabase
+        .from('boletins')
+        .select(`
+          tipos_construcao(nome)
+        `)
+        .not('tipo_construcao_id', 'is', null)
+
+      if (tipoError) throw tipoError
+
+      // Contar tipos únicos
+      const tiposUnicos = new Set()
+      porTipo.forEach(item => {
+        if (item.tipos_construcao?.nome) {
+          tiposUnicos.add(item.tipos_construcao.nome)
+        }
+      })
+
+      return {
+        total: total || 0,
+        porTipo: Array.from(tiposUnicos).map(nome => ({ nome }))
+      }
+    } catch (error) {
+      console.error('Erro em getEstatisticas:', error)
+      return {
+        total: 0,
+        porTipo: []
+      }
     }
   }
 }
