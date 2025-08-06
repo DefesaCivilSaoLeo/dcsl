@@ -16,7 +16,8 @@ import {
   Camera,
   AlertCircle,
   CheckCircle,
-  X
+  X,
+  Printer
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -138,10 +139,10 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
               Editar
             </Button>
           )}
-          <Button variant="outline" onClick={handlePrint}>
-            <Download className="h-4 w-4 mr-2" />
-            Imprimir
-          </Button>
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir
+            </Button>
         </div>
       </div>
 

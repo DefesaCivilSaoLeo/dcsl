@@ -1,0 +1,82 @@
+
+> defesa-civil-frontend@0.0.0 dev
+> vite
+
+
+  VITE v6.3.5  ready in 473 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://169.254.0.21:5173/
+
+> defesa-civil-frontend@0.0.0 dev
+> vite
+
+Port 5173 is in use, trying another one...
+
+  VITE v6.3.5  ready in 463 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: http://169.254.0.21:5174/
+11:28:08 PM [vite] vite.config.js changed, restarting server...
+11:28:08 PM [vite] vite.config.js changed, restarting server...
+11:28:08 PM [vite] server restarted.
+11:28:08 PM [vite] server restarted.
+11:33:56 PM [vite] (client) hmr update /src/components/BoletimForm.jsx, /src/App.css
+11:33:56 PM [vite] (client) page reload nohup.out
+11:36:47 PM [vite] (client) hmr update /src/components/BoletimForm.jsx, /src/App.css
+11:36:47 PM [vite] (client) page reload nohup.out
+11:37:02 PM [vite] (client) hmr update /src/components/BoletimForm.jsx, /src/App.css
+11:37:02 PM [vite] (client) page reload nohup.out
+
+> defesa-civil-frontend@0.0.0 dev
+> vite
+
+11:44:25 PM [vite] (client) page reload nohup.out
+Port 5173 is in use, trying another one...
+Port 5174 is in use, trying another one...
+11:44:26 PM [vite] (client) page reload nohup.out
+
+  VITE v6.3.5  ready in 580 ms
+
+  ➜  Local:   http://localhost:5175/
+  ➜  Network: http://169.254.0.21:5175/
+11:45:14 PM [vite] vite.config.js changed, restarting server...
+11:45:14 PM [vite] vite.config.js changed, restarting server...
+11:45:14 PM [vite] (client) page reload nohup.out
+11:45:14 PM [vite] server restarted.
+11:45:14 PM [vite] server restarted.
+11:45:14 PM [vite] vite.config.js changed, restarting server...
+11:45:14 PM [vite] vite.config.js changed, restarting server...
+11:45:15 PM [vite] server restarted.
+
+> defesa-civil-frontend@0.0.0 dev
+> vite
+
+11:50:28 PM [vite] (client) page reload nohup.out
+Port 5173 is in use, trying another one...
+Port 5174 is in use, trying another one...
+Port 5175 is in use, trying another one...
+
+  VITE v6.3.5  ready in 558 ms
+
+  ➜  Local:   http://localhost:5176/
+  ➜  Network: http://169.254.0.21:5176/
+11:50:29 PM [vite] (client) page reload nohup.out
+11:51:26 PM [vite] vite.config.js changed, restarting server...
+11:51:26 PM [vite] vite.config.js changed, restarting server...
+11:51:26 PM [vite] vite.config.js changed, restarting server...
+11:51:26 PM [vite] (client) page reload nohup.out
+11:51:26 PM [vite] vite.config.js changed, restarting server...
+11:51:26 PM [vite] (client) page reload nohup.out
+11:51:26 PM [vite] server restarted.
+11:51:26 PM [vite] server restarted.
+11:51:26 PM [vite] server restarted.
+11:51:26 PM [vite] server restarted.
+11:52:03 PM [vite] (client) hmr update /src/hooks/useAuth.jsx, /src/App.css
+11:52:03 PM [vite] (client) hmr update /src/hooks/useAuth.jsx, /src/App.css
+11:52:03 PM [vite] (client) page reload nohup.out
+11:52:03 PM [vite] (client) page reload nohup.out
+11:52:03 PM [vite] (client) hmr invalidate /src/hooks/useAuth.jsx Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+11:52:04 PM [vite] (client) page reload nohup.out
+11:52:04 PM [vite] (client) hmr update /src/App.jsx, /src/App.css, /src/components/Layout.jsx, /src/components/Login.jsx, /src/components/BoletimForm.jsx, /src/components/BoletinsList.jsx, /src/components/BoletimView.jsx, /src/components/AdminPanel.jsx
+11:52:04 PM [vite] (client) page reload nohup.out

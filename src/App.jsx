@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx'
 import Layout from './components/Layout'
 import Login from './components/Login'
@@ -13,8 +13,21 @@ import './App.css'
 // Componente principal da aplicação
 const AppContent = () => {
   const { user, loading } = useAuth()
-  const [currentView, setCurrentView] = useState('dashboard')
+  const [currentView, setCurrentView] = useState("dashboard")
   const [selectedBoletimId, setSelectedBoletimId] = useState(null)
+
+  useEffect(() => {
+    console.log("App: useEffect triggered, loading:", loading, "user:", user)
+    if (!loading) {
+      if (user) {
+        console.log("App: User found, setting view to dashboard")
+        setCurrentView("dashboard")
+      } else {
+        console.log("App: No user found, setting view to login")
+        setCurrentView("login")
+      }
+    }
+  }, [user, loading])
 
   if (loading) {
     return (
@@ -30,77 +43,80 @@ const AppContent = () => {
 
   const handleViewBoletim = (id) => {
     setSelectedBoletimId(id)
-    setCurrentView('view-boletim')
+    setCurrentView("view-boletim")
   }
 
   const handleEditBoletim = (id) => {
     setSelectedBoletimId(id)
-    setCurrentView('edit-boletim')
+    setCurrentView("edit-boletim")
   }
 
   const handleNewBoletim = () => {
     setSelectedBoletimId(null)
-    setCurrentView('new-boletim')
+    setCurrentView("new-boletim")
+    console.log("App: handleNewBoletim called, currentView set to new-boletim")
   }
 
   const handleBackToList = () => {
-    setCurrentView('boletins')
+    setCurrentView("boletins")
     setSelectedBoletimId(null)
   }
 
   const handleSaveBoletim = (boletim) => {
-    setCurrentView('boletins')
+    setCurrentView("boletins")
     setSelectedBoletimId(null)
   }
 
   const renderContent = () => {
+    console.log("App: renderContent - currentView:", currentView)
     switch (currentView) {
-      case 'dashboard':
-        return <Dashboard onNavigate={setCurrentView} />
-      
-      case 'boletins':
+      case "dashboard":
+        return <Dashboard onNavigate={setCurrentView} onNewBoletim={handleNewBoletim} />
+
+      case "boletins":
         return (
-          <BoletinsList 
+          <BoletinsList
             onView={handleViewBoletim}
             onEdit={handleEditBoletim}
             onNew={handleNewBoletim}
           />
         )
-      
-      case 'view-boletim':
+
+      case "view-boletim":
         return (
-          <BoletimView 
+          <BoletimView
             boletimId={selectedBoletimId}
             onEdit={handleEditBoletim}
             onBack={handleBackToList}
           />
         )
-      
-      case 'edit-boletim':
+
+      case "edit-boletim":
         return (
-          <BoletimForm 
+          <BoletimForm
             boletimId={selectedBoletimId}
             onSave={handleSaveBoletim}
             onCancel={handleBackToList}
           />
         )
-      
-      case 'new-boletim':
+
+      case "new-boletim":
         return (
-          <BoletimForm 
+          <BoletimForm
             onSave={handleSaveBoletim}
-            onCancel={() => setCurrentView('dashboard')}
+            onCancel={() => setCurrentView("dashboard")}
           />
         )
-      
-      case 'relatorios':
+
+
+      case "relatorios":
         return <Reports />
-      
-      case 'admin':
+
+      case "admin":
         return <AdminPanel />
-      
+
       default:
-        return <Dashboard onNavigate={setCurrentView} />
+        return <Dashboard onNavigate={setCurrentView} onNewBoletim={handleNewBoletim} />
     }
   }
 
@@ -120,5 +136,3 @@ function App() {
 }
 
 export default App
-
-

@@ -16,36 +16,66 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar sessão atual
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        // Buscar dados completos do usuário
-        const { data: userData } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        
-        setUser(userData)
+      const getSession = async () => {
+        console.log("useAuth: Getting session...")
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession()
+          if (error) {
+            console.error("Error getting session:", error)
+            setUser(null)
+          } else if (session?.user) {
+            console.log("useAuth: Session found, user:", session.user.email)
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("*, role")
+              .eq("id", session.user.id)
+              .single()
+
+            if (userError) {
+              console.error("Error fetching user data:", userError)
+              setUser(session.user)
+            } else if (userData) {
+              setUser({ ...session.user, role: userData.role })
+            } else {
+              setUser(session.user)
+            }
+          } else {
+            console.log("useAuth: No session found")
+            setUser(null)
+          }
+        } catch (err) {
+          console.error("Unexpected error in getSession:", err)
+          setUser(null)
+        } finally {
+          // Ensure loading is set to false after a short delay, even if session fails
+          setTimeout(() => {
+            setLoading(false)
+          }, 1000) // 1 second delay
+        }
       }
-      setLoading(false)
-    }
+
 
     getSession()
 
-    // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          const { data: userData } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
+        if (event === "SIGNED_IN" && session?.user) {
+          // Fetch user metadata including role from the 'users' table
+          const { data: userData, error: userError } = await supabase
+            .from("users")
+            .select("*, role")
+            .eq("id", session.user.id)
             .single()
-          
-          setUser(userData)
-        } else {
+
+          if (userError) {
+            console.error("Error fetching user data on auth state change:", userError)
+            setUser(null)
+          } else if (userData) {
+            setUser({ ...session.user, role: userData.role })
+          } else {
+            setUser(session.user)
+          }
+        } else if (event === "SIGNED_OUT") {
           setUser(null)
         }
         setLoading(false)
@@ -60,6 +90,11 @@ export const AuthProvider = ({ children }) => {
       email,
       password
     })
+    if (error) {
+      console.error("useAuth: SignIn error:", error)
+    } else if (data.user) {
+    } else {
+    }
     return { data, error }
   }
 
@@ -70,7 +105,6 @@ export const AuthProvider = ({ children }) => {
     })
 
     if (data.user && !error) {
-      // Criar registro na tabela users
       const { error: userError } = await supabase
         .from('users')
         .insert([
@@ -102,7 +136,7 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signUp,
     signOut,
-    isAdmin: user?.role === 'admin'
+    isAdmin: user?.role === 'admin' // A role será verificada em componentes que a utilizam
   }
 
   return (

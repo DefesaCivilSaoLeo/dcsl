@@ -1,6 +1,17 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import { Button } from './ui/button'
+import { 
+  Menu, 
+  X, 
+  Home, 
+  FileText, 
+  Search, 
+  Settings, 
+  LogOut,
+  Users,
+  BarChart3
+} from 'lucide-react'
 import logoDefesaCivil from '../assets/logo-defesa-civil.jpg'
 
 const Layout = ({ children, onNavigate }) => {
@@ -8,14 +19,14 @@ const Layout = ({ children, onNavigate }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const navigation = [
-    { name: 'Dashboard', key: 'dashboard' },
-    { name: 'Novo Boletim', key: 'new-boletim' },
-    { name: 'Consultar Boletins', key: 'boletins' },
-    { name: 'Relatórios', key: 'relatorios' },
+    { name: 'Dashboard', key: 'dashboard', icon: Home },
+    { name: 'Novo Boletim', key: 'new-boletim', icon: FileText },
+    { name: 'Consultar Boletins', key: 'boletins', icon: Search },
+    { name: 'Relatórios', key: 'relatorios', icon: BarChart3 },
   ]
 
   const adminNavigation = [
-    { name: 'Administração', key: 'admin' },
+    { name: 'Administração', key: 'admin', icon: Users },
   ]
 
   const handleSignOut = async () => {
@@ -40,7 +51,7 @@ const Layout = ({ children, onNavigate }) => {
               size="sm"
               onClick={() => setSidebarOpen(false)}
             >
-              <span>✕</span>
+              <X className="h-6 w-6" />
             </Button>
           </div>
           <nav className="flex-1 space-y-1 px-2 py-4">
@@ -50,7 +61,8 @@ const Layout = ({ children, onNavigate }) => {
                 onClick={() => handleNavigation(item.key)}
                 className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 w-full text-left"
               >
-                <span>{item.name}</span>
+                <item.icon className="mr-3 h-5 w-5" />
+                {item.name}
               </button>
             ))}
             {isAdmin && (
@@ -65,7 +77,7 @@ const Layout = ({ children, onNavigate }) => {
                     onClick={() => handleNavigation(item.key)}
                     className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 w-full text-left"
                   >
-                    <span className="mr-3">👤</span>
+                    <item.icon className="mr-3 h-5 w-5" />
                     {item.name}
                   </button>
                 ))}
@@ -92,7 +104,8 @@ const Layout = ({ children, onNavigate }) => {
               onClick={handleSignOut}
               className="mt-3 w-full justify-start"
             >
-              <span>Sair</span>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
             </Button>
           </div>
         </div>
@@ -112,7 +125,8 @@ const Layout = ({ children, onNavigate }) => {
                 onClick={() => handleNavigation(item.key)}
                 className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 w-full text-left"
               >
-                <span>{item.name}</span>
+                <item.icon className="mr-3 h-5 w-5" />
+                {item.name}
               </button>
             ))}
             {isAdmin && (
@@ -127,7 +141,7 @@ const Layout = ({ children, onNavigate }) => {
                     onClick={() => handleNavigation(item.key)}
                     className="group flex items-center px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 w-full text-left"
                   >
-                    <span className="mr-3">👤</span>
+                    <item.icon className="mr-3 h-5 w-5" />
                     {item.name}
                   </button>
                 ))}
@@ -154,7 +168,8 @@ const Layout = ({ children, onNavigate }) => {
               onClick={handleSignOut}
               className="mt-3 w-full justify-start"
             >
-              <span>Sair</span>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
             </Button>
           </div>
         </div>
@@ -168,7 +183,7 @@ const Layout = ({ children, onNavigate }) => {
             size="sm"
             onClick={() => setSidebarOpen(true)}
           >
-            <span>Menu</span>
+            <Menu className="h-6 w-6" />
           </Button>
           <img className="h-8 w-auto" src={logoDefesaCivil} alt="Defesa Civil" />
           <div className="w-8" />
@@ -188,5 +203,4 @@ const Layout = ({ children, onNavigate }) => {
 }
 
 export default Layout
-
 

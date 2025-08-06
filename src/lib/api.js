@@ -132,11 +132,26 @@ export const boletinsAPI = {
   // Remover encaminhamentos do boletim
   async removeEncaminhamentos(boletimId) {
     const { error } = await supabase
-      .from('boletim_encaminhamentos')
+      .from("boletim_encaminhamentos")
       .delete()
-      .eq('boletim_id', boletimId)
+      .eq("boletim_id", boletimId)
     
     if (error) throw error
+  },
+
+  // Verificar se boletim existe
+  async checkIfExists(numero, ano) {
+    const { data, error } = await supabase
+      .from("boletins")
+      .select("id")
+      .eq("numero", numero)
+      .eq("ano", ano)
+      .single()
+
+    if (error && error.code !== "PGRST116") { // PGRST116 means no rows found
+      throw error
+    }
+    return data !== null
   }
 }
 
@@ -470,7 +485,7 @@ export const relatoriosAPI = {
       `)
       .not('tipos_construcao', 'is', null)
 
-    if (tipoError) throw tipoError
+    if (tipoError) throw error
 
     return {
       total: total.length,
@@ -478,4 +493,5 @@ export const relatoriosAPI = {
     }
   }
 }
+
 
