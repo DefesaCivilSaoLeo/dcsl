@@ -22,7 +22,8 @@ export default defineConfig({
         '5179-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
         '5173-i66j4q1jgja20lowjxm5s-5416ec11.manusvm.computer',
         '5178-ia52iegl3dvq7xrjhjeg6-dabc9ab8.manus.computer',
-        '5174-icp2fmp5my49s5shyud9c-5416ec11.manusvm.computer'
+        '5174-icp2fmp5my49s5shyud9c-5416ec11.manusvm.computer',
+        '5173-icp2fmp5my49s5shyud9c-5416ec11.manusvm.computer'
       ],
   },
   resolve: {
