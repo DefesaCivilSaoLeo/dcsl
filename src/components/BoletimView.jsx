@@ -86,35 +86,81 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
   }
 
   const handleDownload = async () => {
-    alert("handleDownload acionada!");
     console.log("handleDownload acionada!");
-    const input = document.getElementById("boletim-content");
-    console.log("Elemento boletim-content:", input);
-    if (!input) {
+    
+    // Criar uma nova janela para impressão
+    const printWindow = window.open('', '_blank');
+    const boletimContent = document.getElementById("boletim-content");
+    
+    if (!boletimContent) {
       console.error("Elemento para download não encontrado!");
+      setError("Erro: Conteúdo do boletim não encontrado para download.");
       return;
     }
 
-    // Ocultar elementos que não devem aparecer no PDF (como os botões de edição/download)
-    const hiddenElements = document.querySelectorAll(".print\:hidden");
-    hiddenElements.forEach(el => el.style.display = "none");
-
     try {
-      const canvas = await html2canvas(input, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      // Obter o CSS da página atual
+      const styles = Array.from(document.styleSheets)
+        .map(styleSheet => {
+          try {
+            return Array.from(styleSheet.cssRules)
+              .map(rule => rule.cssText)
+              .join('\n');
+          } catch (e) {
+            return '';
+          }
+        })
+        .join('\n');
 
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`boletim-${boletim.numero}-${boletim.ano}.pdf`);
+      // HTML para a nova janela
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Boletim ${boletim.numero}/${boletim.ano}</title>
+          <style>
+            ${styles}
+            @media print {
+              body { margin: 0; }
+              .print\\:hidden { display: none !important; }
+              .print\\:text-black { color: black !important; }
+              .print\\:border-gray-300 { border-color: #d1d5db !important; }
+              .print\\:shadow-none { box-shadow: none !important; }
+              .print\\:mb-8 { margin-bottom: 2rem !important; }
+              .print\\:pb-2 { padding-bottom: 0.5rem !important; }
+              .print\\:gap-2 { gap: 0.5rem !important; }
+              .print\\:space-y-4 > * + * { margin-top: 1rem !important; }
+              .print\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+              .print\\:bg-gray-200 { background-color: #e5e7eb !important; }
+              .print\\:bg-gray-100 { background-color: #f3f4f6 !important; }
+              .print\\:border { border: 1px solid #d1d5db !important; }
+            }
+          </style>
+        </head>
+        <body>
+          ${boletimContent.outerHTML}
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+
+      // Aguardar o carregamento e imprimir
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+      };
+
+      console.log("PDF gerado via impressão!");
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      setError("Erro ao gerar PDF do boletim.");
-    } finally {
-      // Restaurar a visibilidade dos elementos
-      hiddenElements.forEach(el => el.style.display = "");
+      setError("Erro ao gerar PDF do boletim: " + error.message);
+      if (printWindow) {
+        printWindow.close();
+      }
     }
   };
 
@@ -160,7 +206,7 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 print:space-y-4">
+    <div id="boletim-content" className="max-w-4xl mx-auto space-y-6 print:space-y-4">
       {/* Header - Oculto na impressão */}
       <div className="flex justify-between items-center print:hidden">
         <Button variant="outline" onClick={onBack}>
@@ -175,18 +221,14 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
             </Button>
           )}
           <Button variant="outline" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
-            Imprimir
+            Imprimir/PDF
           </Button>
         </div>
       </div>
 
       {/* Cabeçalho do Documento */}
-      <div id="boletim-content" className="text-center print:mb-8">
+      <div className="text-center print:mb-8">
         <h1 className="text-2xl font-bold text-gray-900 print:text-black">
           Superintendência Municipal de Defesa Civil
         </h1>
@@ -484,4 +526,3 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
 }
 
 export default BoletimView
-

@@ -14,53 +14,80 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-
+  console.log("useAuth: current loading state", loading)
   useEffect(() => {
-      const getSession = async () => {
-        console.log("useAuth: Getting session...")
-        try {
-          const { data: { session }, error } = await supabase.auth.getSession()
-          if (error) {
-            console.error("Error getting session:", error)
-            setUser(null)
-          } else if (session?.user) {
-            console.log("useAuth: Session found, user:", session.user.email)
-            const { data: userData, error: userError } = await supabase
-              .from("users")
-              .select("*, role")
-              .eq("id", session.user.id)
-              .single()
-
-            if (userError) {
-              console.error("Error fetching user data:", userError)
-              setUser(session.user)
-            } else if (userData) {
-              setUser({ ...session.user, role: userData.role })
-            } else {
-              setUser(session.user)
-            }
-          } else {
-            console.log("useAuth: No session found")
-            setUser(null)
-          }
-        } catch (err) {
-          console.error("Unexpected error in getSession:", err)
+    const getSession = async () => {
+      console.log("useAuth: Getting session...")
+      try {
+        // Adicionar timeout para evitar travamento
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout na chamada getSession')), 5000)
+        )
+        
+        const sessionPromise = supabase.auth.getSession()
+        
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise])
+        console.log("useAuth: getSession result - session:", session, "error:", error)
+        
+        if (error) {
+          console.error("Error getting session:", error)
           setUser(null)
-        } finally {
-          // Ensure loading is set to false after a short delay, even if session fails
-          setTimeout(() => {
-            setLoading(false)
-          }, 1000) // 1 second delay
-        }
-      }
+        } else if (session?.user) {
+          console.log("useAuth: Session found, user:", session.user.email)
+          const { data: userData, error: userError } = await supabase
+            .from("users")
+            .select("*, role")
+            .eq("id", session.user.id)
+            .single()
 
+          if (userError) {
+            console.error("Error fetching user data:", userError)
+            setUser(session.user)
+          } else if (userData) {
+            setUser({ ...session.user, role: userData.role })
+          } else {
+            setUser(session.user)
+          }
+        } else {
+          console.log("useAuth: No session found")
+          setUser(null)
+        }
+      } catch (err) {
+        console.error("useAuth: Error in getSession call:", err)
+        
+        // Se houver timeout, limpar completamente a sessão
+        if (err.message === 'Timeout na chamada getSession') {
+          console.log("useAuth: Timeout detectado, limpando sessão...")
+          try {
+            // Limpar localStorage do Supabase
+            const keys = Object.keys(localStorage)
+            keys.forEach(key => {
+              if (key.includes('supabase') || key.includes('sb-')) {
+                localStorage.removeItem(key)
+                console.log("useAuth: Removido do localStorage:", key)
+              }
+            })
+            
+            // Tentar fazer signOut para limpar qualquer estado no Supabase
+            await supabase.auth.signOut()
+            console.log("useAuth: SignOut executado após timeout")
+          } catch (cleanupErr) {
+            console.error("useAuth: Erro na limpeza:", cleanupErr)
+          }
+        }
+        
+        setUser(null)
+      } finally {
+        setLoading(false)
+        console.log("useAuth: setLoading(false) called in getSession finally")
+      }
+    }
 
     getSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === "SIGNED_IN" && session?.user) {
-          // Fetch user metadata including role from the 'users' table
           const { data: userData, error: userError } = await supabase
             .from("users")
             .select("*, role")

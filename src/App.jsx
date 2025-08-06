@@ -9,6 +9,10 @@ import BoletimView from './components/BoletimView'
 import AdminPanel from './components/AdminPanel'
 import Reports from './components/Reports'
 import './App.css'
+import { testSupabaseConnection } from './test-supabase.js'
+
+// Executar teste de conectividade
+testSupabaseConnection()
 
 // Componente principal da aplicação
 const AppContent = () => {

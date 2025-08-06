@@ -21,13 +21,44 @@ const Login = () => {
     setLoading(true)
     setError('')
 
-    const { error } = await signIn(email, password)
-    
-    if (error) {
-      setError('Email ou senha incorretos')
+    try {
+      // Adicionar timeout para evitar travamento no login
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout no login')), 10000)
+      )
+      
+      const loginPromise = signIn(email, password)
+      
+      const { error } = await Promise.race([loginPromise, timeoutPromise])
+      
+      if (error) {
+        setError('Email ou senha incorretos')
+      }
+    } catch (err) {
+      console.error('Erro no login:', err)
+      
+      // Se houver timeout, limpar completamente a sessão
+      if (err.message === 'Timeout no login') {
+        console.log("Login: Timeout detectado, limpando sessão...")
+        try {
+          // Limpar localStorage do Supabase
+          const keys = Object.keys(localStorage)
+          keys.forEach(key => {
+            if (key.includes('supabase') || key.includes('sb-')) {
+              localStorage.removeItem(key)
+              console.log("Login: Removido do localStorage:", key)
+            }
+          })
+        } catch (cleanupErr) {
+          console.error("Login: Erro na limpeza:", cleanupErr)
+        }
+        setError('Timeout na conexão. Sessão limpa. Tente novamente.')
+      } else {
+        setError('Erro na conexão. Tente novamente.')
+      }
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   return (
