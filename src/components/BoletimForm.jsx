@@ -402,8 +402,8 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
       const finalBoletimData = {
         ...boletimData,
         data_nascimento: data_nascimento === '' ? null : data_nascimento,
-        bairro_id: boletimData.bairro_id === '' ? null : parseInt(boletimData.bairro_id),
-        tipo_construcao_id: boletimData.tipo_construcao_id === '' ? null : parseInt(boletimData.tipo_construcao_id),
+        bairro_id: boletimData.bairro_id === '' ? null : boletimData.bairro_id,
+        tipo_construcao_id: boletimData.tipo_construcao_id === '' ? null : boletimData.tipo_construcao_id,
         responsavel1_id: boletimData.responsavel1_id === '' ? null : boletimData.responsavel1_id,
         responsavel2_id: boletimData.responsavel2_id === '' ? null : boletimData.responsavel2_id,
       }
@@ -429,12 +429,23 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
         }
 
         // Criar novo boletim
+        console.log("🔍 DEBUG: Dados enviados para boletinsAPI.create:", {
+          ...finalBoletimData,
+          numero: parseInt(numeroBoletim),
+          ano: anoBoletim,
+          created_by: user.id
+        });
+        
         boletim = await boletinsAPI.create({
           ...finalBoletimData,
           numero: parseInt(numeroBoletim),
           ano: anoBoletim,
           created_by: user.id
         })
+        
+        console.log("🔍 DEBUG: Boletim retornado pela API:", boletim);
+        console.log("🔍 DEBUG: boletim.id:", boletim.id, "tipo:", typeof boletim.id);
+        console.log("🔍 DEBUG: boletim.numero:", boletim.numero, "tipo:", typeof boletim.numero);
 
         // Upload das fotos temporárias
         for (const foto of fotos.filter(f => f.isTemp)) {
