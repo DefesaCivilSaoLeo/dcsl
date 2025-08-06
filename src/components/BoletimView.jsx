@@ -21,6 +21,8 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 import { boletinsAPI, fotosAPI, formatBoletimNumber } from '../lib/api'
 import { useAuth } from '../hooks/useAuth.jsx'
 
@@ -83,9 +85,42 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
     return isAdmin || boletim?.created_by === user?.id
   }
 
+  const handleDownload = async () => {
+    alert("handleDownload acionada!");
+    console.log("handleDownload acionada!");
+    const input = document.getElementById("boletim-content");
+    console.log("Elemento boletim-content:", input);
+    if (!input) {
+      console.error("Elemento para download não encontrado!");
+      return;
+    }
+
+    // Ocultar elementos que não devem aparecer no PDF (como os botões de edição/download)
+    const hiddenElements = document.querySelectorAll(".print\:hidden");
+    hiddenElements.forEach(el => el.style.display = "none");
+
+    try {
+      const canvas = await html2canvas(input, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`boletim-${boletim.numero}-${boletim.ano}.pdf`);
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      setError("Erro ao gerar PDF do boletim.");
+    } finally {
+      // Restaurar a visibilidade dos elementos
+      hiddenElements.forEach(el => el.style.display = "");
+    }
+  };
+
   const handlePrint = () => {
-    window.print()
-  }
+    window.print();
+  };
 
   if (loading) {
     return (
@@ -139,15 +174,19 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
               Editar
             </Button>
           )}
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" />
-              Imprimir
-            </Button>
+          <Button variant="outline" onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Download PDF
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            Imprimir
+          </Button>
         </div>
       </div>
 
       {/* Cabeçalho do Documento */}
-      <div className="text-center print:mb-8">
+      <div id="boletim-content" className="text-center print:mb-8">
         <h1 className="text-2xl font-bold text-gray-900 print:text-black">
           Superintendência Municipal de Defesa Civil
         </h1>

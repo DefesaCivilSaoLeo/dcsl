@@ -32,7 +32,7 @@ const boletimSchema = z.object({
   nome_requerente: z.string().min(1, 'Nome do requerente é obrigatório'),
   cpf: z.string().optional(),
   rg: z.string().optional(),
-  data_nascimento: z.string().optional(),
+  data_nascimento: z.string().nullable().optional(),
   endereco: z.string().optional(),
   telefone: z.string().optional(),
   observacoes_identificacao: z.string().optional(),
@@ -40,10 +40,10 @@ const boletimSchema = z.object({
   // Data da Solicitação
   data_solicitacao: z.string().min(1, 'Data da solicitação é obrigatória'),
   horario_solicitacao: z.string().min(1, 'Horário da solicitação é obrigatório'),
-  solicitacao: z.string().optional(),
+  solicitacao: z.string().min(1, 'Solicitação é obrigatória'),
 
   // Descrição das Constatações
-  relatorio: z.string().optional(),
+  relatorio: z.string().min(1, 'Relatório é obrigatório'),
 
   // Tipo de Construção
   tipo_construcao_id: z.string().optional(),
@@ -51,8 +51,7 @@ const boletimSchema = z.object({
   // Diagnóstico
   diagnostico: z.string().optional(),
 
-  // Encaminhamento
-  encaminhamentos: z.array(z.string()).optional(),
+
 
   // Data da Vistoria
   data_vistoria: z.string().min(1, 'Data da vistoria é obrigatória'),
@@ -171,10 +170,15 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 
   const handleEncaminhamentoChange = (encaminhamentoId, checked) => {
     const current = watchedEncaminhamentos
+    console.log("Encaminhamento alterado:", encaminhamentoId, "checked:", checked, "current:", current);
     if (checked) {
-      setValue('encaminhamentos', [...current, encaminhamentoId])
+      const newValue = [...current, encaminhamentoId];
+      console.log("Novo valor dos encaminhamentos:", newValue);
+      setValue('encaminhamentos', newValue)
     } else {
-      setValue('encaminhamentos', current.filter(id => id !== encaminhamentoId))
+      const newValue = current.filter(id => id !== encaminhamentoId);
+      console.log("Novo valor dos encaminhamentos:", newValue);
+      setValue('encaminhamentos', newValue)
     }
   }
 
@@ -239,13 +243,19 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
     setSuccess('')
 
     try {
-      let boletim
+      const { data_nascimento, ...boletimData } = data
 
+      const finalBoletimData = {
+        ...boletimData,
+        data_nascimento: data_nascimento === '' ? null : data_nascimento,
+      }
+
+      let boletim;
+      
       if (boletimId) {
         // Atualizar boletim existente
-        const { encaminhamentos, ...boletimData } = data
         boletim = await boletinsAPI.update(boletimId, {
-          ...boletimData,
+          ...finalBoletimData,
           created_by: user.id
         })
       } else {
@@ -258,9 +268,8 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
         }
 
         // Criar novo boletim
-        const { encaminhamentos, ...boletimData } = data
         boletim = await boletinsAPI.create({
-          ...boletimData,
+          ...finalBoletimData,
           numero: parseInt(numeroBoletim),
           ano: anoBoletim,
           created_by: user.id
@@ -272,10 +281,12 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
         }
       }
 
-      if (data.encaminhamentos && data.encaminhamentos.length > 0) {
+      if (watchedEncaminhamentos && watchedEncaminhamentos.length > 0) {
+        console.log("Encaminhamentos a serem adicionados:", watchedEncaminhamentos);
         await boletinsAPI.removeEncaminhamentos(boletim.id)
-        await boletinsAPI.addEncaminhamentos(boletim.id, data.encaminhamentos)
+        await boletinsAPI.addEncaminhamentos(boletim.id, watchedEncaminhamentos)
       } else {
+        console.log("Nenhum encaminhamento selecionado ou array vazio.");
         await boletinsAPI.removeEncaminhamentos(boletim.id)
       }
 
@@ -566,15 +577,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
               ))}
             </div>
 
-            <div>
-              <Label htmlFor="outros_encaminhamento">Outros</Label>
-              <Textarea
-                id="outros_encaminhamento"
-                {...register('outros_encaminhamento')}
-                placeholder="Outros encaminhamentos não listados acima"
-                rows={2}
-              />
-            </div>
+
           </CardContent>
         </Card>
 
@@ -751,4 +754,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 }
 
 export default BoletimForm
+
+
+
 

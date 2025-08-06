@@ -18,7 +18,7 @@ export const boletinsAPI = {
   async create(boletimData) {
     const { data, error } = await supabase
       .from('boletins')
-      .insert([boletimData])
+      .insert(boletimData)
       .select()
       .single()
     
@@ -117,16 +117,26 @@ export const boletinsAPI = {
 
   // Adicionar encaminhamentos ao boletim
   async addEncaminhamentos(boletimId, encaminhamentoIds) {
+    console.log("API addEncaminhamentos chamada com:", { boletimId, encaminhamentoIds });
+    
     const inserts = encaminhamentoIds.map(encaminhamentoId => ({
       boletim_id: boletimId,
       encaminhamento_id: encaminhamentoId
     }))
 
-    const { error } = await supabase
-      .from('boletim_encaminhamentos')
+    console.log("Dados a serem inseridos na tabela boletim_encaminhamentos:", inserts);
+
+    const { data, error } = await supabase
+      .from("boletim_encaminhamentos")
       .insert(inserts)
+      .select()
     
-    if (error) throw error
+    if (error) {
+      console.error("Erro ao inserir encaminhamentos:", error);
+      throw error;
+    }
+    
+    console.log("Encaminhamentos inseridos com sucesso!");
   },
 
   // Remover encaminhamentos do boletim
@@ -135,7 +145,6 @@ export const boletinsAPI = {
       .from("boletim_encaminhamentos")
       .delete()
       .eq("boletim_id", boletimId)
-    
     if (error) throw error
   },
 
@@ -146,12 +155,11 @@ export const boletinsAPI = {
       .select("id")
       .eq("numero", numero)
       .eq("ano", ano)
-      .single()
 
-    if (error && error.code !== "PGRST116") { // PGRST116 means no rows found
+    if (error) {
       throw error
     }
-    return data !== null
+    return data.length > 0
   }
 }
 
@@ -485,7 +493,7 @@ export const relatoriosAPI = {
       `)
       .not('tipos_construcao', 'is', null)
 
-    if (tipoError) throw error
+    if (tipoError) throw tipoError
 
     return {
       total: total.length,
@@ -493,5 +501,4 @@ export const relatoriosAPI = {
     }
   }
 }
-
 

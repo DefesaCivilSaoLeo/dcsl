@@ -18,7 +18,14 @@ export default defineConfig({
         '5173-ifwkp4q7x7142izq5hkwf-dabc9ab8.manus.computer',
         '5174-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
         '5176-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
-        '3000-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer'
+        '3000-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
+        '5179-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
+        '5178-i0k4xr4be67938t4rk4c8-dabc9ab8.manus.computer',
+        '5180-i0k4xr4be67938t4rk4c8-dabc9ab8.manus.computer',
+        '5180-ia52iegl3dvq7xrjhjeg6-dabc9ab8.manus.computer',
+        '5181-ia52iegl3dvq7xrjhjeg6-dabc9ab8.manus.computer',
+        '5178-ia52iegl3dvq7xrjhjeg6-dabc9ab8.manus.computer',
+        '5178-ia52iegl3dvq7xrjhjeg6-dabc9ab8.manus.computer'
       ]
   },
   resolve: {
