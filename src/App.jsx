@@ -75,7 +75,7 @@ const AppContent = () => {
     console.log("App: renderContent - currentView:", currentView)
     switch (currentView) {
       case "dashboard":
-        return <Dashboard onNavigate={setCurrentView} onNewBoletim={handleNewBoletim} />
+        return <Dashboard onNavigate={setCurrentView} onNewBoletim={handleNewBoletim} onViewBoletim={handleViewBoletim} />
 
       case "boletins":
         return (

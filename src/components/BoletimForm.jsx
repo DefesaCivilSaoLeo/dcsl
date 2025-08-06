@@ -449,10 +449,18 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
         }
       }
 
+      console.log("🔍 DEBUG ENCAMINHAMENTOS:");
+      console.log("  - boletim.id:", boletim.id, "tipo:", typeof boletim.id);
+      console.log("  - watchedEncaminhamentos:", watchedEncaminhamentos, "tipo:", typeof watchedEncaminhamentos);
+      console.log("  - watchedEncaminhamentos.length:", watchedEncaminhamentos?.length);
+      
       if (watchedEncaminhamentos && watchedEncaminhamentos.length > 0) {
+        console.log("🔍 DEBUG: Chamando removeEncaminhamentos com boletim.id:", boletim.id);
         await boletinsAPI.removeEncaminhamentos(boletim.id)
+        console.log("🔍 DEBUG: Chamando addEncaminhamentos com:", { boletimId: boletim.id, encaminhamentos: watchedEncaminhamentos });
         await boletinsAPI.addEncaminhamentos(boletim.id, watchedEncaminhamentos)
       } else {
+        console.log("🔍 DEBUG: Chamando apenas removeEncaminhamentos com boletim.id:", boletim.id);
         await boletinsAPI.removeEncaminhamentos(boletim.id)
       }
 

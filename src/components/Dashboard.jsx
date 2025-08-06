@@ -6,7 +6,7 @@ import { FileText, Search, BarChart3, Plus, Calendar, Users, AlertTriangle } fro
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-const Dashboard = ({ onNavigate, onNewBoletim }) => {
+const Dashboard = ({ onNavigate, onNewBoletim, onViewBoletim }) => {
   const [stats, setStats] = useState({
     totalBoletins: 0,
     boletinsHoje: 0,
@@ -240,7 +240,7 @@ const Dashboard = ({ onNavigate, onNewBoletim }) => {
                     <p className="text-xs text-gray-500">
                       Criado em {format(new Date(boletim.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                     </p>
-                    <Button variant="outline" size="sm" className="mt-2">
+                    <Button variant="outline" size="sm" className="mt-2" onClick={() => onViewBoletim(boletim.id)}>
                       Visualizar
                     </Button>
                   </div>
