@@ -8,27 +8,10 @@ export default defineConfig({
   plugins: [react(),tailwindcss()],
   server: {
     host: true,
-      allowedHosts: [
-        '5173-if83337ddk7rsoh6m4363-dabc9ab8.manus.computer',
-        '5174-ijgt1qq0jgq52axolpj9q-dabc9ab8.manus.computer',
-        '5174-icvoa55xvism3kgm8l7v1-dabc9ab8.manus.computer',
-        '5173-icvoa55xvism3kgm8l7v1-dabc9ab8.manus.computer',
-        '5174-ifwkp4q7x7142izq5hkwf-dabc9ab8.manus.computer',
-        '5175-ifwkp4q7x7142izq5hkwf-dabc9ab8.manus.computer',
-        '5173-ifwkp4q7x7142izq5hkwf-dabc9ab8.manus.computer',
-        '5174-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
-        '5176-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
-        '3000-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
-        '5179-iktrqvvi35bp4rwn6fadb-dabc9ab8.manus.computer',
-        '5173-i66j4q1jgja20lowjxm5s-5416ec11.manusvm.computer',
-        '5178-ia52iegl3dvq7xrjhjeg6-dabc9ab8.manus.computer',
-        '5174-icp2fmp5my49s5shyud9c-5416ec11.manusvm.computer',
-        '5173-icp2fmp5my49s5shyud9c-5416ec11.manusvm.computer',
-        '5174-ivm8ndkst9ow0z5dr35no-5416ec11.manusvm.computer',
-        '5173-ifvv1effylva2d3gv7wlx-5416ec11.manusvm.computer',
-        '5174-iktb4k4t24galnlktyzb7-5416ec11.manusvm.computer',
-        '5173-i8j13peyb1ded2xqelywy-5416ec11.manusvm.computer'
-      ],
+    allowedHosts: [
+      '5173-i3mkvodqxl3gz52i0wddf-bfd1d00c.manusvm.computer',
+      '5174-i3mkvodqxl3gz52i0wddf-bfd1d00c.manusvm.computer'
+    ]
   },
   resolve: {
     alias: {
@@ -36,3 +19,4 @@ export default defineConfig({
     },
   },
 })
+

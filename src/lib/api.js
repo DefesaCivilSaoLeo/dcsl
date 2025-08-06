@@ -37,7 +37,8 @@ export const boletinsAPI = {
         responsaveis_1:responsaveis!boletins_responsavel1_id_fkey(nome, cargo, assinatura),
         responsaveis_2:responsaveis!boletins_responsavel2_id_fkey(nome, cargo, assinatura),
         boletim_encaminhamentos(
-          encaminhamentos(nome)
+          encaminhamento_id,
+          encaminhamentos(id, nome)
         ),
         fotos(*),
         assinaturas(*)

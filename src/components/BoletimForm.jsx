@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { Button } from './ui/button'
@@ -99,7 +99,8 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors }
+    control,
+    formState: { errors, isValid }
   } = useForm({
     resolver: zodResolver(boletimSchema),
     defaultValues: {
@@ -109,7 +110,11 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
       horario_solicitacao: format(new Date(), 'HH:mm'),
       data_vistoria: format(new Date(), 'yyyy-MM-dd'),
       feito_registro: false,
-      encaminhamentos: []
+      encaminhamentos: [],
+      bairro_id: '',
+      tipo_construcao_id: '',
+      responsavel1_id: '',
+      responsavel2_id: ''
     }
   })
 
@@ -249,6 +254,8 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
     try {
       const boletim = await boletinsAPI.getById(boletimId);
       
+      console.log("🔍 DEBUG: Valor feito_registro do banco:", boletim.feito_registro, typeof boletim.feito_registro);
+      
       // Preencher formulário com dados do boletim
       Object.keys(boletim).forEach(key => {
         if (key === 'data_solicitacao' || key === 'data_vistoria' || key === 'data_nascimento') {
@@ -256,11 +263,16 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
         } else if (key === 'horario_solicitacao') {
           setValue(key, boletim[key] || '');
         } else if (key === 'boletim_encaminhamentos') {
-          const encIds = boletim[key].map(enc => enc.encaminhamentos.id);
+          const encIds = boletim[key].map(enc => enc.encaminhamento_id);
           setValue('encaminhamentos', encIds);
         } else if (key === 'bairro_id' || key === 'tipo_construcao_id' || key === 'responsavel1_id' || key === 'responsavel2_id') {
           // Converter IDs para string para os Selects
           setValue(key, boletim[key] ? boletim[key].toString() : '');
+        } else if (key === 'feito_registro') {
+          // Converter para boolean
+          const boolValue = Boolean(boletim[key]);
+          console.log("🔍 DEBUG: Convertendo feito_registro para:", boolValue, typeof boolValue);
+          setValue(key, boolValue);
         } else {
           setValue(key, boletim[key] || '');
         }
@@ -353,6 +365,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
   // Funções para manipular assinaturas
   const handleSaveAssinatura = async (tipo, dataURL) => {
     try {
+      console.log("🔍 DEBUG: handleSaveAssinatura - boletimId:", boletimId, "tipo:", typeof boletimId);
       if (boletimId) {
         // Se já existe boletim, salvar assinatura
         await assinaturasAPI.save(boletimId, tipo, dataURL)
@@ -375,9 +388,13 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
   }
 
   const onSubmit = async (data) => {
+    console.log("🚀 DEBUG: onSubmit INICIADO!");
+    console.log("📝 DEBUG: Dados recebidos:", data);
+    console.log("❌ DEBUG: Erros de validação:", errors);
+    console.log("🔍 DEBUG: boletimId:", boletimId);
     setLoading(true)
-    setError('')
-    setSuccess('')
+    setError("")
+    setSuccess("")
 
     try {
       const { data_nascimento, ...boletimData } = data
@@ -385,11 +402,19 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
       const finalBoletimData = {
         ...boletimData,
         data_nascimento: data_nascimento === '' ? null : data_nascimento,
+        bairro_id: boletimData.bairro_id === '' ? null : parseInt(boletimData.bairro_id),
+        tipo_construcao_id: boletimData.tipo_construcao_id === '' ? null : parseInt(boletimData.tipo_construcao_id),
+        responsavel1_id: boletimData.responsavel1_id === '' ? null : boletimData.responsavel1_id,
+        responsavel2_id: boletimData.responsavel2_id === '' ? null : boletimData.responsavel2_id,
       }
+
+      console.log("🔍 DEBUG: finalBoletimData.responsavel1_id:", finalBoletimData.responsavel1_id, "tipo:", typeof finalBoletimData.responsavel1_id);
+      console.log("🔍 DEBUG: finalBoletimData.responsavel2_id:", finalBoletimData.responsavel2_id, "tipo:", typeof finalBoletimData.responsavel2_id);
 
       let boletim;
       if (boletimId) {
         // Atualizar boletim existente
+        console.log("🔍 DEBUG: Chamando boletinsAPI.update com boletimId:", boletimId, "e tipo:", typeof boletimId);
         boletim = await boletinsAPI.update(boletimId, {
           ...finalBoletimData,
           created_by: user.id
@@ -459,19 +484,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
         </p>
       </div>
 
-      {/* Alertas */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
-      {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* 1. Identificação */}
@@ -599,18 +612,24 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
                 </div>
                 <div>
                   <Label htmlFor="bairro_id" className="text-sm text-gray-600">Bairro</Label>
-                  <Select onValueChange={(value) => setValue('bairro_id', value)} value={watchedBairroId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o bairro" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {bairros.map((bairro) => (
-                        <SelectItem key={bairro.id} value={bairro.id.toString()}>
-                          {bairro.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    name="bairro_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o bairro" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bairros.map((bairro) => (
+                            <SelectItem key={bairro.id} value={bairro.id.toString()}>
+                              {bairro.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
               </div>
             </div>
@@ -704,16 +723,22 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
           <CardContent>
             <div>
               <Label htmlFor="tipo_construcao_id">Tipo</Label>
-              <Select onValueChange={(value) => setValue('tipo_construcao_id', value)} value={watchedTipoConstrucaoId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo de construção" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tiposConstrucao.map(tipo => (
-                    <SelectItem key={tipo.id} value={tipo.id}>{tipo.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="tipo_construcao_id"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de construção" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposConstrucao.map(tipo => (
+                        <SelectItem key={tipo.id} value={tipo.id}>{tipo.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </CardContent>
         </Card>
@@ -785,20 +810,26 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
           <CardContent className="space-y-4">
             <div>
               <Label>Feito registro?</Label>
-              <RadioGroup
-                value={watchedFeitoRegistro ? 'sim' : 'nao'}
-                onValueChange={(value) => setValue('feito_registro', value === 'sim')}
-                className="flex space-x-4 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="sim" id="registro_sim" />
-                  <Label htmlFor="registro_sim">Sim</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="nao" id="registro_nao" />
-                  <Label htmlFor="registro_nao">Não</Label>
-                </div>
-              </RadioGroup>
+              <Controller
+                name="feito_registro"
+                control={control}
+                render={({ field }) => (
+                  <RadioGroup
+                    value={field.value ? 'sim' : 'nao'}
+                    onValueChange={(value) => field.onChange(value === 'sim')}
+                    className="flex space-x-4 mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="sim" id="registro_sim" />
+                      <Label htmlFor="registro_sim">Sim</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="nao" id="registro_nao" />
+                      <Label htmlFor="registro_nao">Não</Label>
+                    </div>
+                  </RadioGroup>
+                )}
+              />
             </div>
 
             {watchedFeitoRegistro && (
@@ -868,34 +899,46 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="responsavel1_id">Responsável 1</Label>
-                <Select onValueChange={(value) => setValue('responsavel1_id', value)} value={watchedResponsavel1Id}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {responsaveis.map(responsavel => (
-                      <SelectItem key={responsavel.id} value={responsavel.id}>
-                        {responsavel.nome} - {responsavel.cargo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="responsavel1_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {responsaveis.map(responsavel => (
+                          <SelectItem key={responsavel.id} value={responsavel.id}>
+                            {responsavel.nome} - {responsavel.cargo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
 
               <div>
                 <Label htmlFor="responsavel2_id">Responsável 2</Label>
-                <Select onValueChange={(value) => setValue('responsavel2_id', value)} value={watchedResponsavel2Id}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {responsaveis.map(responsavel => (
-                      <SelectItem key={responsavel.id} value={responsavel.id}>
-                        {responsavel.nome} - {responsavel.cargo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="responsavel2_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {responsaveis.map(responsavel => (
+                          <SelectItem key={responsavel.id} value={responsavel.id}>
+                            {responsavel.nome} - {responsavel.cargo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 
@@ -907,16 +950,64 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
                 {/* Assinatura do Solicitante - sempre editável */}
                 <SignaturePadComponent
                   title="Assinatura do Solicitante"
-                  onSave={(dataURL) => handleSaveAssinatura('solicitante', dataURL)}
+                  onSave={(dataURL) => handleSaveAssinatura("solicitante", dataURL)}
                   initialSignature={assinaturas.solicitante}
                   disabled={loading}
                 />
                 
-
+                {/* Assinatura do Responsável 1 - apenas exibição */}
+                {watchedResponsavel1Id && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Assinatura do Responsável 1</Label>
+                    <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
+                      {assinaturas.responsavel1 ? (
+                        <img 
+                          src={assinaturas.responsavel1} 
+                          alt="Assinatura do Responsável 1" 
+                          className="max-w-full max-h-[180px] object-contain"
+                        />
+                      ) : (
+                        <p className="text-gray-500 text-sm">Assinatura não encontrada</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Assinatura do Responsável 2 - apenas exibição */}
+                {watchedResponsavel2Id && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Assinatura do Responsável 2</Label>
+                    <div className="border rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
+                      {assinaturas.responsavel2 ? (
+                        <img 
+                          src={assinaturas.responsavel2} 
+                          alt="Assinatura do Responsável 2" 
+                          className="max-w-full max-h-[180px] object-contain"
+                        />
+                      ) : (
+                        <p className="text-gray-500 text-sm">Assinatura não encontrada</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Alertas */}
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert className="mb-4">
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        )}
 
         {/* Botões de Ação */}
         <div className="flex justify-end space-x-4">
@@ -925,7 +1016,17 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
               Cancelar
             </Button>
           )}
-          <Button type="submit" disabled={loading}>
+          <Button 
+            type="submit" 
+            disabled={loading}
+            onClick={() => {
+              console.log("🔥 BOTÃO CLICADO!");
+              console.log("✅ Formulário válido?", isValid);
+              console.log("❌ Erros atuais:", errors);
+              console.log("🔍 Erro feito_registro:", errors.feito_registro);
+              console.log("📋 Dados atuais do formulário:", watch());
+            }}
+          >
             {loading ? 'Salvando...' : (boletimId ? 'Atualizar Boletim' : 'Criar Boletim')}
           </Button>
         </div>

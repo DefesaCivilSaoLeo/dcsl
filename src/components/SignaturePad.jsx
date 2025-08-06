@@ -91,6 +91,7 @@ const SignaturePadComponent = ({
         if (initialSignature && !isEditing) {
           signaturePadRef.current.fromDataURL(initialSignature)
           setHasSignature(true)
+          setUploadedImage(null) // Clear uploaded image if drawing
         }
       })
     }
@@ -113,7 +114,7 @@ const SignaturePadComponent = ({
   const saveSignature = () => {
     let dataURL = null
     
-    if (activeTab === 'draw' && signaturePadRef.current && hasSignature) {
+    if (activeTab === 'draw' && signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
       dataURL = signaturePadRef.current.toDataURL('image/png')
     } else if (activeTab === 'upload' && uploadedImage) {
       dataURL = uploadedImage
@@ -145,7 +146,7 @@ const SignaturePadComponent = ({
     clearSignature()
   }
 
-  const canSave = (activeTab === 'draw' && hasSignature) || (activeTab === 'upload' && uploadedImage);
+  const canSave = (activeTab === 'draw' && hasSignature && !signaturePadRef.current.isEmpty()) || (activeTab === 'upload' && uploadedImage);
   // Se há assinatura salva e não está editando, mostrar preview
   if (initialSignature && !isEditing) {
     return (
