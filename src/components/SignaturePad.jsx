@@ -146,7 +146,6 @@ const SignaturePadComponent = ({
   }
 
   const canSave = (activeTab === 'draw' && hasSignature) || (activeTab === 'upload' && uploadedImage);
-  console.log("SignaturePadComponent - canSave:", canSave, "activeTab:", activeTab, "hasSignature:", hasSignature, "uploadedImage:", uploadedImage);
   // Se há assinatura salva e não está editando, mostrar preview
   if (initialSignature && !isEditing) {
     return (

@@ -135,97 +135,81 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 
   // Carregar assinaturas dos responsáveis quando selecionados
   useEffect(() => {
-    console.log("=== useEffect de assinaturas disparado ===");
-    console.log("watchedResponsavel1Id:", watchedResponsavel1Id, "tipo:", typeof watchedResponsavel1Id);
-    console.log("watchedResponsavel2Id:", watchedResponsavel2Id, "tipo:", typeof watchedResponsavel2Id);
-    console.log("responsaveis.length:", responsaveis.length);
-    console.log("responsaveis:", responsaveis);
-    
     const loadAssinaturasResponsaveis = async () => {
-      console.log("Carregando assinaturas dos responsáveis...", { watchedResponsavel1Id, watchedResponsavel2Id, responsaveis });
       // Certifica que responsaveis está carregado antes de tentar buscar assinaturas
       if (!responsaveis || responsaveis.length === 0) {
-        console.log("Responsaveis ainda não carregados ou vazios.");
         return;
       }
 
-      const assinaturasData = { ...assinaturas };
       let updated = false;
+      const newAssinaturas = { ...assinaturas };
       
       // Carregar assinatura do responsável 1
       if (watchedResponsavel1Id) {
-        console.log("Tentando carregar assinatura para responsável 1 ID:", watchedResponsavel1Id, "(tipo: " + typeof watchedResponsavel1Id + ")");
-        const resp1 = responsaveis.find(r => {
-          console.log("Comparando r.id (", r.id, ", tipo: " + typeof r.id + ") com watchedResponsavel1Id (", watchedResponsavel1Id, ", tipo: " + typeof watchedResponsavel1Id + ")");
-          return r.id === watchedResponsavel1Id;
-        });
-        console.log("Responsável 1 encontrado:", resp1);
+        const resp1 = responsaveis.find(r => r.id === watchedResponsavel1Id);
         if (resp1 && resp1.assinatura) {
           try {
             const url = await assinaturasAPI.getPublicUrl(resp1.assinatura);
-            assinaturasData.responsavel1 = url;
-            updated = true;
-            console.log("Assinatura do responsável 1 carregada:", assinaturasData.responsavel1);
+            if (newAssinaturas.responsavel1 !== url) {
+              newAssinaturas.responsavel1 = url;
+              updated = true;
+            }
           } catch (error) {
             console.error("Erro ao carregar assinatura do responsável 1:", error);
-            assinaturasData.responsavel1 = null;
-            updated = true;
+            if (newAssinaturas.responsavel1 !== null) {
+              newAssinaturas.responsavel1 = null;
+              updated = true;
+            }
           }
         } else {
-          assinaturasData.responsavel1 = null;
-          updated = true;
-          console.log("Responsável 1 sem assinatura cadastrada ou não encontrado. Resp1:", resp1);
+          if (newAssinaturas.responsavel1 !== null) {
+            newAssinaturas.responsavel1 = null;
+            updated = true;
+          }
         }
       } else {
-        assinaturasData.responsavel1 = null;
-        updated = true;
-        console.log("Responsável 1 não selecionado.");
+        if (newAssinaturas.responsavel1 !== null) {
+          newAssinaturas.responsavel1 = null;
+          updated = true;
+        }
       }
       
       // Carregar assinatura do responsável 2
       if (watchedResponsavel2Id) {
-        const resp2 = responsaveis.find(r => {
-          console.log("Comparando r.id (", r.id, ", tipo: " + typeof r.id + ") com watchedResponsavel2Id (", watchedResponsavel2Id, ", tipo: " + typeof watchedResponsavel2Id + ")");
-          return r.id === watchedResponsavel2Id;
-        });
+        const resp2 = responsaveis.find(r => r.id === watchedResponsavel2Id);
         if (resp2 && resp2.assinatura) {
           try {
             const url = await assinaturasAPI.getPublicUrl(resp2.assinatura);
-            assinaturasData.responsavel2 = url;
-            updated = true;
-            console.log("Assinatura do responsável 2 carregada:", assinaturasData.responsavel2);
+            if (newAssinaturas.responsavel2 !== url) {
+              newAssinaturas.responsavel2 = url;
+              updated = true;
+            }
           } catch (error) {
             console.error("Erro ao carregar assinatura do responsável 2:", error);
-            assinaturasData.responsavel2 = null;
-            updated = true;
+            if (newAssinaturas.responsavel2 !== null) {
+              newAssinaturas.responsavel2 = null;
+              updated = true;
+            }
           }
         } else {
-          assinaturasData.responsavel2 = null;
-          updated = true;
-          console.log("Responsável 2 sem assinatura cadastrada ou não encontrado.");
+          if (newAssinaturas.responsavel2 !== null) {
+            newAssinaturas.responsavel2 = null;
+            updated = true;
+          }
         }
       } else {
-        assinaturasData.responsavel2 = null;
-        updated = true;
-        console.log("Responsável 2 não selecionado.");
+        if (newAssinaturas.responsavel2 !== null) {
+          newAssinaturas.responsavel2 = null;
+          updated = true;
+        }
       }
       
       if (updated) {
-        console.log("=== ATUALIZANDO ESTADO DAS ASSINATURAS ===", {
-          'assinaturasData.responsavel1': assinaturasData.responsavel1,
-          'assinaturasData.responsavel2': assinaturasData.responsavel2,
-          'estado anterior': assinaturas
-        });
-        setAssinaturas(prev => ({
-          ...prev,
-          responsavel1: assinaturasData.responsavel1,
-          responsavel2: assinaturasData.responsavel2
-        }));
+        setAssinaturas(newAssinaturas);
       }
     };
 
     // Executar sempre que os IDs dos responsáveis ou a lista de responsáveis mudar
-    // Garante que a função é chamada após responsaveis ser populado
     if (responsaveis.length > 0) {
       loadAssinaturasResponsaveis();
     }
@@ -233,7 +217,6 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 
   const loadConfigData = async () => {
     try {
-      console.log("Iniciando loadConfigData...");
       const [tipos, encam, resp, bairrosData, campos] = await Promise.all([
         configAPI.getTiposConstrucao(),
         configAPI.getEncaminhamentos(),
@@ -241,14 +224,12 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
         configAPI.getBairros(),
         configAPI.getCamposObrigatorios()
       ]);
-      console.log("Dados de configuração carregados:", { tipos, encam, resp, bairrosData, campos });
 
       setTiposConstrucao(tipos);
       setEncaminhamentos(encam);
       setResponsaveis(resp);
       setBairros(bairrosData);
       setCamposObrigatorios(campos);
-      console.log("Responsaveis setados no estado:", resp);
     } catch (error) {
       console.error("Erro ao carregar configurações:", error);
       setError("Erro ao carregar configurações do sistema");
@@ -266,9 +247,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 
   const loadBoletim = async () => {
     try {
-      console.log("Iniciando loadBoletim para boletimId:", boletimId);
       const boletim = await boletinsAPI.getById(boletimId);
-      console.log("Boletim carregado:", boletim);
       
       // Preencher formulário com dados do boletim
       Object.keys(boletim).forEach(key => {
@@ -299,7 +278,6 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
       
       // As assinaturas dos responsáveis serão carregadas pelo useEffect que monitora os IDs
       setAssinaturas(assinaturasData);
-      console.log("Assinaturas do solicitante setadas no loadBoletim:", assinaturasData);
     } catch (error) {
       console.error("Erro ao carregar boletim:", error);
       setError("Erro ao carregar dados do boletim");
@@ -308,14 +286,11 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 
   const handleEncaminhamentoChange = (encaminhamentoId, checked) => {
     const current = watchedEncaminhamentos
-    console.log("Encaminhamento alterado:", encaminhamentoId, "checked:", checked, "current:", current);
     if (checked) {
       const newValue = [...current, encaminhamentoId];
-      console.log("Novo valor dos encaminhamentos:", newValue);
       setValue('encaminhamentos', newValue)
     } else {
       const newValue = current.filter(id => id !== encaminhamentoId);
-      console.log("Novo valor dos encaminhamentos:", newValue);
       setValue('encaminhamentos', newValue)
     }
   }
@@ -413,8 +388,6 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
       }
 
       let boletim;
-      console.log("Dados finais do boletim a serem enviados:", finalBoletimData);
-      console.log("Assinaturas a serem salvas com o boletim:", assinaturas);
       if (boletimId) {
         // Atualizar boletim existente
         boletim = await boletinsAPI.update(boletimId, {
@@ -452,11 +425,9 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
       }
 
       if (watchedEncaminhamentos && watchedEncaminhamentos.length > 0) {
-        console.log("Encaminhamentos a serem adicionados:", watchedEncaminhamentos);
         await boletinsAPI.removeEncaminhamentos(boletim.id)
         await boletinsAPI.addEncaminhamentos(boletim.id, watchedEncaminhamentos)
       } else {
-        console.log("Nenhum encaminhamento selecionado ou array vazio.");
         await boletinsAPI.removeEncaminhamentos(boletim.id)
       }
 
@@ -943,55 +914,33 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
                 
                 {/* Assinatura do Responsável 1 - automática se cadastrada */}
                 <div className="space-y-2">
-                  {watchedResponsavel1Id ? (
-                    <>
-                      {assinaturas.responsavel1 ? (
-                        <Card className="w-full">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium flex items-center justify-between">
-                              <span className="flex items-center">
-                                <Edit3 className="h-4 w-4 mr-2" />
-                                Assinatura do Responsável 1
-                              </span>
-                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                                Automática
-                              </span>
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="border rounded-lg p-2 bg-gray-50">
-                              <img 
-                                src={assinaturas.responsavel1} 
-                                alt="Assinatura do Responsável 1" 
-                                className="w-full h-20 object-contain"
-                              />
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2 text-center">
-                              {responsaveis.find(r => r.id === watchedResponsavel1Id)?.nome}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        <Card className="w-full">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium flex items-center">
-                              <Edit3 className="h-4 w-4 mr-2" />
-                              Assinatura do Responsável 1
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                              <p className="text-sm text-gray-500">
-                                {responsaveis.find(r => r.id === watchedResponsavel1Id)?.nome} ainda não cadastrou sua assinatura
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                Solicite ao responsável para cadastrar no painel administrativo
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </>
+                  {watchedResponsavel1Id && assinaturas.responsavel1 ? (
+                    <SignaturePadComponent
+                      key={assinaturas.responsavel1} // Força a re-renderização quando a URL muda
+                      title="Assinatura do Responsável 1"
+                      onSave={(dataURL) => handleSaveAssinatura("responsavel1", dataURL)}
+                      initialSignature={assinaturas.responsavel1}
+                      disabled={true} // Assinatura automática não é editável aqui
+                    />
+                  ) : watchedResponsavel1Id ? (
+                    <Card className="w-full">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center">
+                          <Edit3 className="h-4 w-4 mr-2" />
+                          Assinatura do Responsável 1
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          <p className="text-sm text-gray-500">
+                            {responsaveis.find(r => r.id === watchedResponsavel1Id)?.nome} ainda não cadastrou sua assinatura
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Solicite ao responsável para cadastrar no painel administrativo
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ) : (
                     <Card className="w-full">
                       <CardHeader className="pb-3">
@@ -1015,31 +964,13 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
                   {watchedResponsavel2Id ? (
                     <>
                       {assinaturas.responsavel2 ? (
-                        <Card className="w-full">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium flex items-center justify-between">
-                              <span className="flex items-center">
-                                <Edit3 className="h-4 w-4 mr-2" />
-                                Assinatura do Responsável 2
-                              </span>
-                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                                Automática
-                              </span>
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="border rounded-lg p-2 bg-gray-50">
-                              <img 
-                                src={assinaturas.responsavel2} 
-                                alt="Assinatura do Responsável 2" 
-                                className="w-full h-20 object-contain"
-                              />
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2 text-center">
-                              {responsaveis.find(r => r.id === watchedResponsavel2Id)?.nome}
-                            </p>
-                          </CardContent>
-                        </Card>
+                        <SignaturePadComponent
+                          key={assinaturas.responsavel2} // Força a re-renderização quando a URL muda
+                          title="Assinatura do Responsável 2"
+                          onSave={(dataURL) => handleSaveAssinatura("responsavel2", dataURL)}
+                          initialSignature={assinaturas.responsavel2}
+                          disabled={true} // Assinatura automática não é editável aqui
+                        />
                       ) : (
                         <Card className="w-full">
                           <CardHeader className="pb-3">
