@@ -8,10 +8,11 @@ export default defineConfig({
   plugins: [react(),tailwindcss()],
   server: {
     host: true,
-    allowedHosts: [
-      '5173-i3mkvodqxl3gz52i0wddf-bfd1d00c.manusvm.computer',
-      '5174-i3mkvodqxl3gz52i0wddf-bfd1d00c.manusvm.computer'
-    ]
+      allowedHosts: [
+        '5173-i3mkvodqxl3gz52i0wddf-bfd1d00c.manusvm.computer',
+        '5174-i3mkvodqxl3gz52i0wddf-bfd1d00c.manusvm.computer',
+        '5173-ipbe6yzbbkji468xjkfcz-bfd1d00c.manusvm.computer'
+      ]
   },
   resolve: {
     alias: {
