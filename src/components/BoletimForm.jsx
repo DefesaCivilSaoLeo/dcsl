@@ -961,37 +961,33 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
                 
                 {/* Assinatura do Responsável 2 - automática se cadastrada */}
                 <div className="space-y-2">
-                  {watchedResponsavel2Id ? (
-                    <>
-                      {assinaturas.responsavel2 ? (
-                        <SignaturePadComponent
-                          key={assinaturas.responsavel2} // Força a re-renderização quando a URL muda
-                          title="Assinatura do Responsável 2"
-                          onSave={(dataURL) => handleSaveAssinatura("responsavel2", dataURL)}
-                          initialSignature={assinaturas.responsavel2}
-                          disabled={true} // Assinatura automática não é editável aqui
-                        />
-                      ) : (
-                        <Card className="w-full">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-medium flex items-center">
-                              <Edit3 className="h-4 w-4 mr-2" />
-                              Assinatura do Responsável 2
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                              <p className="text-sm text-gray-500">
-                                {responsaveis.find(r => r.id === watchedResponsavel2Id)?.nome} ainda não cadastrou sua assinatura
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                Solicite ao responsável para cadastrar no painel administrativo
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </>
+                  {watchedResponsavel2Id && assinaturas.responsavel2 ? (
+                    <SignaturePadComponent
+                      key={assinaturas.responsavel2} // Força a re-renderização quando a URL muda
+                      title="Assinatura do Responsável 2"
+                      onSave={(dataURL) => handleSaveAssinatura("responsavel2", dataURL)}
+                      initialSignature={assinaturas.responsavel2}
+                      disabled={true} // Assinatura automática não é editável aqui
+                    />
+                  ) : watchedResponsavel2Id ? (
+                    <Card className="w-full">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center">
+                          <Edit3 className="h-4 w-4 mr-2" />
+                          Assinatura do Responsável 2
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          <p className="text-sm text-gray-500">
+                            {responsaveis.find(r => r.id === watchedResponsavel2Id)?.nome} ainda não cadastrou sua assinatura
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Solicite ao responsável para cadastrar no painel administrativo
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ) : (
                     <Card className="w-full">
                       <CardHeader className="pb-3">
