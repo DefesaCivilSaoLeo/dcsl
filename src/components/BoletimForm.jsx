@@ -12,11 +12,12 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Alert, AlertDescription } from './ui/alert'
 import { Separator } from './ui/separator'
-import { CalendarIcon, Upload, X, AlertCircle } from 'lucide-react'
+import { CalendarIcon, Upload, X, AlertCircle, Edit3 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { boletinsAPI, configAPI, fotosAPI } from '../lib/api'
+import { boletinsAPI, configAPI, fotosAPI, assinaturasAPI } from '../lib/api'
 import { useAuth } from '../hooks/useAuth.jsx'
+import SignaturePadComponent from './SignaturePad'
 
 // Estados do Brasil
 const ESTADOS_BRASIL = [
@@ -33,7 +34,10 @@ const boletimSchema = z.object({
   cpf: z.string().optional(),
   rg: z.string().optional(),
   data_nascimento: z.string().nullable().optional(),
-  endereco: z.string().optional(),
+  endereco_rua: z.string().optional(),
+  endereco_numero: z.string().optional(),
+  endereco_complemento: z.string().optional(),
+  bairro_id: z.string().optional(),
   telefone: z.string().optional(),
   observacoes_identificacao: z.string().optional(),
 
@@ -76,11 +80,19 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
   const [tiposConstrucao, setTiposConstrucao] = useState([])
   const [encaminhamentos, setEncaminhamentos] = useState([])
   const [responsaveis, setResponsaveis] = useState([])
+  const [bairros, setBairros] = useState([])
   const [camposObrigatorios, setCamposObrigatorios] = useState({})
 
   // Fotos
   const [fotos, setFotos] = useState([])
   const [uploadingFoto, setUploadingFoto] = useState(false)
+
+  // Assinaturas
+  const [assinaturas, setAssinaturas] = useState({
+    solicitante: null,
+    responsavel1: null,
+    responsavel2: null
+  })
 
   const {
     register,
@@ -103,70 +115,196 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 
   const watchedEncaminhamentos = watch('encaminhamentos') || []
   const watchedFeitoRegistro = watch('feito_registro')
+  const watchedUf = watch('uf')
+  const watchedBairroId = watch('bairro_id')
+  const watchedTipoConstrucaoId = watch('tipo_construcao_id')
+  const watchedResponsavel1Id = watch('responsavel1_id')
+  const watchedResponsavel2Id = watch('responsavel2_id')
 
   useEffect(() => {
-    loadConfigData()
-    if (!boletimId) {
-      loadNextNumber()
-    } else {
-      loadBoletim()
+    const initializeForm = async () => {
+      await loadConfigData()
+      if (!boletimId) {
+        loadNextNumber()
+      } else {
+        loadBoletim()
+      }
     }
+    initializeForm()
   }, [boletimId])
+
+  // Carregar assinaturas dos responsáveis quando selecionados
+  useEffect(() => {
+    console.log("=== useEffect de assinaturas disparado ===");
+    console.log("watchedResponsavel1Id:", watchedResponsavel1Id, "tipo:", typeof watchedResponsavel1Id);
+    console.log("watchedResponsavel2Id:", watchedResponsavel2Id, "tipo:", typeof watchedResponsavel2Id);
+    console.log("responsaveis.length:", responsaveis.length);
+    console.log("responsaveis:", responsaveis);
+    
+    const loadAssinaturasResponsaveis = async () => {
+      console.log("Carregando assinaturas dos responsáveis...", { watchedResponsavel1Id, watchedResponsavel2Id, responsaveis });
+      // Certifica que responsaveis está carregado antes de tentar buscar assinaturas
+      if (!responsaveis || responsaveis.length === 0) {
+        console.log("Responsaveis ainda não carregados ou vazios.");
+        return;
+      }
+
+      const assinaturasData = { ...assinaturas };
+      let updated = false;
+      
+      // Carregar assinatura do responsável 1
+      if (watchedResponsavel1Id) {
+        console.log("Tentando carregar assinatura para responsável 1 ID:", watchedResponsavel1Id, "(tipo: " + typeof watchedResponsavel1Id + ")");
+        const resp1 = responsaveis.find(r => {
+          console.log("Comparando r.id (", r.id, ", tipo: " + typeof r.id + ") com watchedResponsavel1Id (", watchedResponsavel1Id, ", tipo: " + typeof watchedResponsavel1Id + ")");
+          return r.id === watchedResponsavel1Id;
+        });
+        console.log("Responsável 1 encontrado:", resp1);
+        if (resp1 && resp1.assinatura) {
+          try {
+            const url = await assinaturasAPI.getPublicUrl(resp1.assinatura);
+            assinaturasData.responsavel1 = url;
+            updated = true;
+            console.log("Assinatura do responsável 1 carregada:", assinaturasData.responsavel1);
+          } catch (error) {
+            console.error("Erro ao carregar assinatura do responsável 1:", error);
+            assinaturasData.responsavel1 = null;
+            updated = true;
+          }
+        } else {
+          assinaturasData.responsavel1 = null;
+          updated = true;
+          console.log("Responsável 1 sem assinatura cadastrada ou não encontrado. Resp1:", resp1);
+        }
+      } else {
+        assinaturasData.responsavel1 = null;
+        updated = true;
+        console.log("Responsável 1 não selecionado.");
+      }
+      
+      // Carregar assinatura do responsável 2
+      if (watchedResponsavel2Id) {
+        const resp2 = responsaveis.find(r => {
+          console.log("Comparando r.id (", r.id, ", tipo: " + typeof r.id + ") com watchedResponsavel2Id (", watchedResponsavel2Id, ", tipo: " + typeof watchedResponsavel2Id + ")");
+          return r.id === watchedResponsavel2Id;
+        });
+        if (resp2 && resp2.assinatura) {
+          try {
+            const url = await assinaturasAPI.getPublicUrl(resp2.assinatura);
+            assinaturasData.responsavel2 = url;
+            updated = true;
+            console.log("Assinatura do responsável 2 carregada:", assinaturasData.responsavel2);
+          } catch (error) {
+            console.error("Erro ao carregar assinatura do responsável 2:", error);
+            assinaturasData.responsavel2 = null;
+            updated = true;
+          }
+        } else {
+          assinaturasData.responsavel2 = null;
+          updated = true;
+          console.log("Responsável 2 sem assinatura cadastrada ou não encontrado.");
+        }
+      } else {
+        assinaturasData.responsavel2 = null;
+        updated = true;
+        console.log("Responsável 2 não selecionado.");
+      }
+      
+      if (updated) {
+        console.log("=== ATUALIZANDO ESTADO DAS ASSINATURAS ===", {
+          'assinaturasData.responsavel1': assinaturasData.responsavel1,
+          'assinaturasData.responsavel2': assinaturasData.responsavel2,
+          'estado anterior': assinaturas
+        });
+        setAssinaturas(prev => ({
+          ...prev,
+          responsavel1: assinaturasData.responsavel1,
+          responsavel2: assinaturasData.responsavel2
+        }));
+      }
+    };
+
+    // Executar sempre que os IDs dos responsáveis ou a lista de responsáveis mudar
+    // Garante que a função é chamada após responsaveis ser populado
+    if (responsaveis.length > 0) {
+      loadAssinaturasResponsaveis();
+    }
+  }, [watchedResponsavel1Id, watchedResponsavel2Id, responsaveis]);
 
   const loadConfigData = async () => {
     try {
-      const [tipos, encam, resp, campos] = await Promise.all([
+      console.log("Iniciando loadConfigData...");
+      const [tipos, encam, resp, bairrosData, campos] = await Promise.all([
         configAPI.getTiposConstrucao(),
         configAPI.getEncaminhamentos(),
         configAPI.getResponsaveis(),
+        configAPI.getBairros(),
         configAPI.getCamposObrigatorios()
-      ])
+      ]);
+      console.log("Dados de configuração carregados:", { tipos, encam, resp, bairrosData, campos });
 
-      setTiposConstrucao(tipos)
-      setEncaminhamentos(encam)
-      setResponsaveis(resp)
-      setCamposObrigatorios(campos)
+      setTiposConstrucao(tipos);
+      setEncaminhamentos(encam);
+      setResponsaveis(resp);
+      setBairros(bairrosData);
+      setCamposObrigatorios(campos);
+      console.log("Responsaveis setados no estado:", resp);
     } catch (error) {
-      console.error('Erro ao carregar configurações:', error)
-      setError('Erro ao carregar configurações do sistema')
+      console.error("Erro ao carregar configurações:", error);
+      setError("Erro ao carregar configurações do sistema");
     }
-  }
+  };
 
   const loadNextNumber = async () => {
     try {
-      const numero = await boletinsAPI.getNextNumber(anoBoletim)
-      setNumeroBoletim(numero)
+      const numero = await boletinsAPI.getNextNumber(anoBoletim);
+      setNumeroBoletim(numero);
     } catch (error) {
-      console.error('Erro ao buscar próximo número:', error)
+      console.error("Erro ao buscar próximo número:", error);
     }
-  }
+  };
 
   const loadBoletim = async () => {
     try {
-      const boletim = await boletinsAPI.getById(boletimId)
+      console.log("Iniciando loadBoletim para boletimId:", boletimId);
+      const boletim = await boletinsAPI.getById(boletimId);
+      console.log("Boletim carregado:", boletim);
       
       // Preencher formulário com dados do boletim
       Object.keys(boletim).forEach(key => {
         if (key === 'data_solicitacao' || key === 'data_vistoria' || key === 'data_nascimento') {
-          setValue(key, boletim[key] ? format(new Date(boletim[key]), 'yyyy-MM-dd') : '')
+          setValue(key, boletim[key] ? format(new Date(boletim[key]), 'yyyy-MM-dd') : '');
         } else if (key === 'horario_solicitacao') {
-          setValue(key, boletim[key] || '')
+          setValue(key, boletim[key] || '');
         } else if (key === 'boletim_encaminhamentos') {
-          const encIds = boletim[key].map(enc => enc.encaminhamentos.id)
-          setValue('encaminhamentos', encIds)
+          const encIds = boletim[key].map(enc => enc.encaminhamentos.id);
+          setValue('encaminhamentos', encIds);
+        } else if (key === 'bairro_id' || key === 'tipo_construcao_id' || key === 'responsavel1_id' || key === 'responsavel2_id') {
+          // Converter IDs para string para os Selects
+          setValue(key, boletim[key] ? boletim[key].toString() : '');
         } else {
-          setValue(key, boletim[key] || '')
+          setValue(key, boletim[key] || '');
         }
-      })
+      });
 
-      setNumeroBoletim(boletim.numero)
-      setAnoBoletim(boletim.ano)
-      setFotos(boletim.fotos || [])
+      setNumeroBoletim(boletim.numero);
+      setAnoBoletim(boletim.ano);
+      setFotos(boletim.fotos || []);
+
+      // Carregar assinaturas do solicitante
+      const assinaturasData = {};
+      if (boletim.assinatura_solicitante) {
+        assinaturasData.solicitante = await assinaturasAPI.getPublicUrl(boletim.assinatura_solicitante);
+      }
+      
+      // As assinaturas dos responsáveis serão carregadas pelo useEffect que monitora os IDs
+      setAssinaturas(assinaturasData);
+      console.log("Assinaturas do solicitante setadas no loadBoletim:", assinaturasData);
     } catch (error) {
-      console.error('Erro ao carregar boletim:', error)
-      setError('Erro ao carregar dados do boletim')
+      console.error("Erro ao carregar boletim:", error);
+      setError("Erro ao carregar dados do boletim");
     }
-  }
+  };
 
   const handleEncaminhamentoChange = (encaminhamentoId, checked) => {
     const current = watchedEncaminhamentos
@@ -237,6 +375,30 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
     }
   }
 
+  // Funções para manipular assinaturas
+  const handleSaveAssinatura = async (tipo, dataURL) => {
+    try {
+      if (boletimId) {
+        // Se já existe boletim, salvar assinatura
+        await assinaturasAPI.save(boletimId, tipo, dataURL)
+        setAssinaturas(prev => ({
+          ...prev,
+          [tipo]: dataURL
+        }))
+        setSuccess(`Assinatura ${tipo} salva com sucesso`)
+      } else {
+        // Se é novo boletim, armazenar temporariamente
+        setAssinaturas(prev => ({
+          ...prev,
+          [tipo]: dataURL
+        }))
+        setSuccess(`Assinatura ${tipo} será salva ao criar o boletim`)
+      }
+    } catch (error) {
+      setError(`Erro ao salvar assinatura ${tipo}`)
+    }
+  }
+
   const onSubmit = async (data) => {
     setLoading(true)
     setError('')
@@ -251,7 +413,8 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
       }
 
       let boletim;
-      
+      console.log("Dados finais do boletim a serem enviados:", finalBoletimData);
+      console.log("Assinaturas a serem salvas com o boletim:", assinaturas);
       if (boletimId) {
         // Atualizar boletim existente
         boletim = await boletinsAPI.update(boletimId, {
@@ -278,6 +441,13 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
         // Upload das fotos temporárias
         for (const foto of fotos.filter(f => f.isTemp)) {
           await fotosAPI.upload(boletim.id, foto.file, user.id)
+        }
+
+        // Salvar assinaturas temporárias
+        for (const [tipo, dataURL] of Object.entries(assinaturas)) {
+          if (dataURL && typeof dataURL === 'string' && dataURL.startsWith('data:')) {
+            await assinaturasAPI.save(boletim.id, tipo, dataURL)
+          }
         }
       }
 
@@ -364,7 +534,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="uf">UF</Label>
-                <Select onValueChange={(value) => setValue('uf', value)} defaultValue="RS">
+                <Select onValueChange={(value) => setValue('uf', value)} value={watchedUf}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o estado" />
                   </SelectTrigger>
@@ -428,13 +598,50 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
             </div>
 
             <div>
-              <Label htmlFor="endereco">Endereço</Label>
-              <Textarea
-                id="endereco"
-                {...register('endereco')}
-                placeholder="Endereço completo"
-                rows={2}
-              />
+              <Label htmlFor="endereco_rua">Endereço</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="endereco_rua" className="text-sm text-gray-600">Rua/Avenida</Label>
+                  <Input
+                    id="endereco_rua"
+                    {...register('endereco_rua')}
+                    placeholder="Nome da rua/avenida"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="endereco_numero" className="text-sm text-gray-600">Número</Label>
+                  <Input
+                    id="endereco_numero"
+                    {...register('endereco_numero')}
+                    placeholder="Número"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                <div>
+                  <Label htmlFor="endereco_complemento" className="text-sm text-gray-600">Complemento</Label>
+                  <Input
+                    id="endereco_complemento"
+                    {...register('endereco_complemento')}
+                    placeholder="Apto, casa, etc."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bairro_id" className="text-sm text-gray-600">Bairro</Label>
+                  <Select onValueChange={(value) => setValue('bairro_id', value)} value={watchedBairroId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o bairro" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bairros.map((bairro) => (
+                        <SelectItem key={bairro.id} value={bairro.id.toString()}>
+                          {bairro.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -526,7 +733,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
           <CardContent>
             <div>
               <Label htmlFor="tipo_construcao_id">Tipo</Label>
-              <Select onValueChange={(value) => setValue('tipo_construcao_id', value)}>
+              <Select onValueChange={(value) => setValue('tipo_construcao_id', value)} value={watchedTipoConstrucaoId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo de construção" />
                 </SelectTrigger>
@@ -690,7 +897,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="responsavel1_id">Responsável 1</Label>
-                <Select onValueChange={(value) => setValue('responsavel1_id', value)}>
+                <Select onValueChange={(value) => setValue('responsavel1_id', value)} value={watchedResponsavel1Id}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o responsável" />
                   </SelectTrigger>
@@ -706,7 +913,7 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
 
               <div>
                 <Label htmlFor="responsavel2_id">Responsável 2</Label>
-                <Select onValueChange={(value) => setValue('responsavel2_id', value)}>
+                <Select onValueChange={(value) => setValue('responsavel2_id', value)} value={watchedResponsavel2Id}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o responsável" />
                   </SelectTrigger>
@@ -721,16 +928,155 @@ const BoletimForm = ({ boletimId, onSave, onCancel }) => {
               </div>
             </div>
 
-            <div className="text-center text-sm text-gray-500 mt-6">
-              <p>Espaço para assinatura dos responsáveis</p>
-              <div className="flex justify-between mt-4">
-                <div className="text-center">
-                  <div className="border-t border-gray-300 w-48 mx-auto"></div>
-                  <p className="mt-1">Responsável 1</p>
+            {/* Assinaturas */}
+            <div className="space-y-6 mt-8">
+              <h3 className="text-lg font-semibold text-gray-900">Assinaturas</h3>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Assinatura do Solicitante - sempre editável */}
+                <SignaturePadComponent
+                  title="Assinatura do Solicitante"
+                  onSave={(dataURL) => handleSaveAssinatura('solicitante', dataURL)}
+                  initialSignature={assinaturas.solicitante}
+                  disabled={loading}
+                />
+                
+                {/* Assinatura do Responsável 1 - automática se cadastrada */}
+                <div className="space-y-2">
+                  {watchedResponsavel1Id ? (
+                    <>
+                      {assinaturas.responsavel1 ? (
+                        <Card className="w-full">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-medium flex items-center justify-between">
+                              <span className="flex items-center">
+                                <Edit3 className="h-4 w-4 mr-2" />
+                                Assinatura do Responsável 1
+                              </span>
+                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                Automática
+                              </span>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="border rounded-lg p-2 bg-gray-50">
+                              <img 
+                                src={assinaturas.responsavel1} 
+                                alt="Assinatura do Responsável 1" 
+                                className="w-full h-20 object-contain"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2 text-center">
+                              {responsaveis.find(r => r.id === watchedResponsavel1Id)?.nome}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card className="w-full">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-medium flex items-center">
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Assinatura do Responsável 1
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                              <p className="text-sm text-gray-500">
+                                {responsaveis.find(r => r.id === watchedResponsavel1Id)?.nome} ainda não cadastrou sua assinatura
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                Solicite ao responsável para cadastrar no painel administrativo
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  ) : (
+                    <Card className="w-full">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium">
+                          Assinatura do Responsável 1
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          <p className="text-sm text-gray-500">
+                            Selecione um responsável acima
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
-                <div className="text-center">
-                  <div className="border-t border-gray-300 w-48 mx-auto"></div>
-                  <p className="mt-1">Responsável 2</p>
+                
+                {/* Assinatura do Responsável 2 - automática se cadastrada */}
+                <div className="space-y-2">
+                  {watchedResponsavel2Id ? (
+                    <>
+                      {assinaturas.responsavel2 ? (
+                        <Card className="w-full">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-medium flex items-center justify-between">
+                              <span className="flex items-center">
+                                <Edit3 className="h-4 w-4 mr-2" />
+                                Assinatura do Responsável 2
+                              </span>
+                              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                Automática
+                              </span>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="border rounded-lg p-2 bg-gray-50">
+                              <img 
+                                src={assinaturas.responsavel2} 
+                                alt="Assinatura do Responsável 2" 
+                                className="w-full h-20 object-contain"
+                              />
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2 text-center">
+                              {responsaveis.find(r => r.id === watchedResponsavel2Id)?.nome}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <Card className="w-full">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-medium flex items-center">
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Assinatura do Responsável 2
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                              <p className="text-sm text-gray-500">
+                                {responsaveis.find(r => r.id === watchedResponsavel2Id)?.nome} ainda não cadastrou sua assinatura
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                Solicite ao responsável para cadastrar no painel administrativo
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  ) : (
+                    <Card className="w-full">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium">
+                          Assinatura do Responsável 2
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          <p className="text-sm text-gray-500">
+                            Selecione um responsável acima
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </div>
             </div>

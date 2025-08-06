@@ -146,7 +146,7 @@ const Login = () => {
 
         <div className="text-center">
           <p className="text-xs text-gray-500">
-            © 2025 Defesa Civil São Leopoldo. Todos os direitos reservados.
+            © 2025 Defesa Civil São Leopoldo. Desenvolvido por Fabiano Camargo. Todos os direitos reservados.
           </p>
         </div>
       </div>

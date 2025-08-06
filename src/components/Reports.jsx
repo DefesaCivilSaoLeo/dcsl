@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { format, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -28,6 +28,7 @@ const Reports = () => {
   const [tiposConstrucao, setTiposConstrucao] = useState([])
   const [responsaveis, setResponsaveis] = useState([])
   const [encaminhamentos, setEncaminhamentos] = useState([])
+  const [bairros, setBairros] = useState([])
 
   useEffect(() => {
     loadStatistics()
@@ -76,6 +77,15 @@ const Reports = () => {
         .order('nome')
       
       if (!encError) setEncaminhamentos(enc || [])
+
+      // Carregar bairros
+      const { data: bairrosData, error: bairrosError } = await supabase
+        .from('bairros')
+        .select('id, nome')
+        .eq('ativo', true)
+        .order('nome')
+      
+      if (!bairrosError) setBairros(bairrosData || [])
     } catch (error) {
       console.error('Erro ao carregar opções de filtro:', error)
     }
@@ -112,6 +122,13 @@ const Reports = () => {
             data = await relatoriosAPI.getBoletinsPorEncaminhamento(inicio, fim)
           } else {
             data = await relatoriosAPI.getBoletinsPorEncaminhamentoEspecifico(inicio, fim, specificFilter)
+          }
+          break
+        case 'bairro':
+          if (specificFilter === 'todos') {
+            data = await relatoriosAPI.getBoletinsPorBairro(inicio, fim)
+          } else {
+            data = await relatoriosAPI.getBoletinsPorBairroEspecifico(inicio, fim, specificFilter)
           }
           break
         default:
@@ -221,6 +238,8 @@ const Reports = () => {
       headers.push('Responsável 1', 'Responsável 2')
     } else if (reportType === 'encaminhamento') {
       headers.push('Encaminhamentos')
+    } else if (reportType === 'bairro') {
+      headers.push('Bairro')
     }
 
     const csvContent = [
@@ -242,6 +261,8 @@ const Reports = () => {
         } else if (reportType === 'encaminhamento') {
           const encaminhamentos = boletim.boletim_encaminhamentos?.map(be => be.encaminhamentos?.nome).filter(Boolean).join('; ') || 'N/A'
           row.push(`"${encaminhamentos}"`)
+        } else if (reportType === 'bairro') {
+          row.push(`"${boletim.bairros?.nome || 'N/A'}"`)
         }
 
         return row.join(',')
@@ -266,6 +287,7 @@ const Reports = () => {
       case 'tipo': return 'Por Tipo de Construção'
       case 'responsavel': return 'Por Responsável'
       case 'encaminhamento': return 'Por Encaminhamento'
+      case 'bairro': return 'Por Bairro'
       default: return 'Relatório'
     }
   }
@@ -275,6 +297,7 @@ const Reports = () => {
       case 'tipo': return '<th>Tipo de Construção</th>'
       case 'responsavel': return '<th>Responsável 1</th><th>Responsável 2</th>'
       case 'encaminhamento': return '<th>Encaminhamentos</th>'
+      case 'bairro': return '<th>Bairro</th>'
       default: return '<th>Tipo de Construção</th>'
     }
   }
@@ -287,6 +310,7 @@ const Reports = () => {
         const encaminhamentos = boletim.boletim_encaminhamentos?.map(be => be.encaminhamentos?.nome).filter(Boolean).join(', ') || 'N/A'
         return `<td>${encaminhamentos}</td>`
       }
+      case 'bairro': return `<td>${boletim.bairros?.nome || 'N/A'}</td>`
       default: return `<td>${boletim.tipos_construcao?.nome || 'N/A'}</td>`
     }
   }
@@ -432,17 +456,19 @@ const Reports = () => {
                   <SelectItem value="tipo">Por Tipo de Construção</SelectItem>
                   <SelectItem value="responsavel">Por Responsável</SelectItem>
                   <SelectItem value="encaminhamento">Por Encaminhamento</SelectItem>
+                  <SelectItem value="bairro">Por Bairro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Filtro específico - aparece apenas para tipos que precisam */}
-            {(reportType === 'tipo' || reportType === 'responsavel' || reportType === 'encaminhamento') && (
+            {(reportType === 'tipo' || reportType === 'responsavel' || reportType === 'encaminhamento' || reportType === 'bairro') && (
               <div>
                 <Label htmlFor="specific_filter">
                   {reportType === 'tipo' && 'Tipo de Construção'}
                   {reportType === 'responsavel' && 'Responsável'}
                   {reportType === 'encaminhamento' && 'Encaminhamento'}
+                  {reportType === 'bairro' && 'Bairro'}
                 </Label>
                 <Select value={specificFilter} onValueChange={setSpecificFilter}>
                   <SelectTrigger>
@@ -458,6 +484,9 @@ const Reports = () => {
                     ))}
                     {reportType === 'encaminhamento' && encaminhamentos.map(enc => (
                       <SelectItem key={enc.id} value={enc.id.toString()}>{enc.nome}</SelectItem>
+                    ))}
+                    {reportType === 'bairro' && bairros.map(bairro => (
+                      <SelectItem key={bairro.id} value={bairro.id.toString()}>{bairro.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -645,6 +674,7 @@ const Reports = () => {
                         </>
                       )}
                       {reportType === 'encaminhamento' && <th className="text-left p-2">Encaminhamentos</th>}
+                      {reportType === 'bairro' && <th className="text-left p-2">Bairro</th>}
                       {reportType === 'periodo' && <th className="text-left p-2">Tipo Construção</th>}
                     </tr>
                   </thead>
@@ -675,6 +705,9 @@ const Reports = () => {
                           <td className="p-2">
                             {boletim.boletim_encaminhamentos?.map(be => be.encaminhamentos?.nome).filter(Boolean).join(', ') || 'N/A'}
                           </td>
+                        )}
+                        {reportType === 'bairro' && (
+                          <td className="p-2">{boletim.bairros?.nome || 'N/A'}</td>
                         )}
                         {reportType === 'periodo' && (
                           <td className="p-2">{boletim.tipos_construcao?.nome || 'N/A'}</td>

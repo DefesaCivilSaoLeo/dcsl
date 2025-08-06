@@ -33,8 +33,9 @@ export const boletinsAPI = {
       .select(`
         *,
         tipos_construcao(nome),
-        responsaveis!boletins_responsavel1_id_fkey(nome, cargo),
-        responsaveis_2:responsaveis!boletins_responsavel2_id_fkey(nome, cargo),
+        bairros(nome),
+        responsaveis_1:responsaveis!boletins_responsavel1_id_fkey(nome, cargo, assinatura),
+        responsaveis_2:responsaveis!boletins_responsavel2_id_fkey(nome, cargo, assinatura),
         boletim_encaminhamentos(
           encaminhamentos(nome)
         ),
@@ -242,6 +243,88 @@ export const fotosAPI = {
   }
 }
 
+// API de Assinaturas
+export const assinaturasAPI = {
+  // Salvar assinatura
+  async save(boletimId, tipo, dataURL) {
+    // Converter dataURL para blob
+    const response = await fetch(dataURL)
+    const blob = await response.blob()
+    
+    // Gerar nome único para o arquivo
+    const timestamp = new Date().getTime()
+    const fileName = `assinatura_${tipo}_${boletimId}_${timestamp}.png`
+    
+    // Upload para o storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('assinaturas')
+      .upload(fileName, blob, {
+        contentType: 'image/png',
+        upsert: false
+      })
+
+    if (uploadError) throw uploadError
+
+    // Salvar referência no banco (atualizar boletim)
+    const updateData = {}
+    updateData[`assinatura_${tipo}`] = uploadData.path
+
+    const { data, error } = await supabase
+      .from('boletins')
+      .update(updateData)
+      .eq('id', boletimId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return uploadData.path
+  },
+
+  // Obter URL pública da assinatura
+  async getPublicUrl(urlStorage) {
+    if (!urlStorage) return null
+    
+    const { data } = supabase.storage
+      .from('assinaturas')
+      .getPublicUrl(urlStorage)
+
+    return data.publicUrl
+  },
+
+  // Deletar assinatura
+  async delete(boletimId, tipo) {
+    // Buscar dados do boletim
+    const { data: boletim, error: fetchError } = await supabase
+      .from('boletins')
+      .select(`assinatura_${tipo}`)
+      .eq('id', boletimId)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    const urlStorage = boletim[`assinatura_${tipo}`]
+    if (!urlStorage) return
+
+    // Deletar do storage
+    const { error: storageError } = await supabase.storage
+      .from('assinaturas')
+      .remove([urlStorage])
+
+    if (storageError) throw storageError
+
+    // Remover referência do banco
+    const updateData = {}
+    updateData[`assinatura_${tipo}`] = null
+
+    const { error } = await supabase
+      .from('boletins')
+      .update(updateData)
+      .eq('id', boletimId)
+
+    if (error) throw error
+  }
+}
+
 // API de Configurações
 export const configAPI = {
   // Buscar tipos de construção
@@ -272,6 +355,18 @@ export const configAPI = {
   async getResponsaveis() {
     const { data, error } = await supabase
       .from('responsaveis')
+      .select('*')
+      .eq('ativo', true)
+      .order('nome')
+
+    if (error) throw error
+    return data
+  },
+
+  // Buscar bairros
+  async getBairros() {
+    const { data, error } = await supabase
+      .from('bairros')
       .select('*')
       .eq('ativo', true)
       .order('nome')
@@ -440,6 +535,67 @@ export const adminAPI = {
     if (error) throw error
   },
 
+  // Assinaturas de responsáveis
+  async saveAssinaturaResponsavel(responsavelId, dataURL) {
+    // Converter dataURL para blob
+    const response = await fetch(dataURL)
+    const blob = await response.blob()
+    
+    // Gerar nome único para o arquivo
+    const timestamp = new Date().getTime()
+    const fileName = `responsavel_${responsavelId}_${timestamp}.png`
+    
+    // Upload para o storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('assinaturas')
+      .upload(fileName, blob, {
+        contentType: 'image/png',
+        upsert: false
+      })
+
+    if (uploadError) throw uploadError
+
+    // Salvar referência no banco (atualizar responsável)
+    const { data, error } = await supabase
+      .from('responsaveis')
+      .update({ assinatura: uploadData.path })
+      .eq('id', responsavelId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return uploadData.path
+  },
+
+  async deleteAssinaturaResponsavel(responsavelId) {
+    // Buscar dados do responsável
+    const { data: responsavel, error: fetchError } = await supabase
+      .from('responsaveis')
+      .select('assinatura')
+      .eq('id', responsavelId)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    const urlStorage = responsavel.assinatura
+    if (!urlStorage) return
+
+    // Deletar do storage
+    const { error: storageError } = await supabase.storage
+      .from('assinaturas')
+      .remove([urlStorage])
+
+    if (storageError) throw storageError
+
+    // Remover referência do banco
+    const { error } = await supabase
+      .from('responsaveis')
+      .update({ assinatura: null })
+      .eq('id', responsavelId)
+
+    if (error) throw error
+  },
+
   // Campos obrigatórios
   async updateCampoObrigatorio(campo, obrigatorio) {
     try {
@@ -480,6 +636,63 @@ export const adminAPI = {
       console.error('Erro em updateCampoObrigatorio:', error)
       throw error
     }
+  },
+
+  // Bairros
+  async createBairro(nome) {
+    const { data, error } = await supabase
+      .from('bairros')
+      .insert([{ nome, ativo: true }])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async updateBairro(id, nome) {
+    const { data, error } = await supabase
+      .from('bairros')
+      .update({ nome })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async deleteBairro(id) {
+    // Desativar bairro em vez de excluir para manter integridade referencial
+    const { error } = await supabase
+      .from('bairros')
+      .update({ ativo: false })
+      .eq('id', id)
+
+    if (error) throw error
+  },
+
+  async toggleBairroAtivo(id, ativo) {
+    const { data, error } = await supabase
+      .from('bairros')
+      .update({ ativo })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  // Buscar todos os bairros (ativos e inativos) para administração
+  async getAllBairros() {
+    const { data, error } = await supabase
+      .from('bairros')
+      .select('*')
+      .order('nome')
+
+    if (error) throw error
+    return data
   }
 }
 
@@ -686,6 +899,52 @@ export const relatoriosAPI = {
         porTipo: []
       }
     }
+  },
+
+  // Relatório por bairro
+  async getBoletinsPorBairro(dataInicio, dataFim) {
+    const { data, error } = await supabase
+      .from('boletins')
+      .select(`
+        id,
+        numero,
+        ano,
+        nome_requerente,
+        data_solicitacao,
+        data_vistoria,
+        bairros(nome),
+        created_at
+      `)
+      .gte('data_solicitacao', dataInicio)
+      .lte('data_solicitacao', dataFim)
+      .not('bairro_id', 'is', null)
+      .order('bairros(nome)')
+
+    if (error) throw error
+    return data
+  },
+
+  // Relatório por bairro específico
+  async getBoletinsPorBairroEspecifico(dataInicio, dataFim, bairroId) {
+    const { data, error } = await supabase
+      .from('boletins')
+      .select(`
+        id,
+        numero,
+        ano,
+        nome_requerente,
+        data_solicitacao,
+        data_vistoria,
+        bairros!inner(nome),
+        created_at
+      `)
+      .eq('bairro_id', bairroId)
+      .gte('data_solicitacao', dataInicio)
+      .lte('data_solicitacao', dataFim)
+      .order('data_solicitacao')
+
+    if (error) throw error
+    return data
   }
 }
 

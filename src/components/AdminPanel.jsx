@@ -18,10 +18,12 @@ import {
   CheckCircle,
   Building,
   ArrowRight,
-  UserCheck
+  UserCheck,
+  MapPin
 } from 'lucide-react'
-import { adminAPI, configAPI } from '../lib/api'
+import { adminAPI, configAPI, assinaturasAPI } from '../lib/api'
 import { useAuth } from '../hooks/useAuth.jsx'
+import SignaturePadComponent from './SignaturePad'
 
 const AdminPanel = () => {
   const { user, isAdmin } = useAuth()
@@ -37,12 +39,20 @@ const AdminPanel = () => {
   const [tiposConstrucao, setTiposConstrucao] = useState([])
   const [encaminhamentos, setEncaminhamentos] = useState([])
   const [responsaveis, setResponsaveis] = useState([])
+  const [bairros, setBairros] = useState([])
   const [camposObrigatorios, setCamposObrigatorios] = useState({})
 
   // Estados para formulários
   const [newTipoConstrucao, setNewTipoConstrucao] = useState('')
   const [newEncaminhamento, setNewEncaminhamento] = useState('')
   const [newResponsavel, setNewResponsavel] = useState({ nome: '', cargo: '' })
+
+  // Estados para bairros
+  const [newBairro, setNewBairro] = useState('')
+  const [editingBairro, setEditingBairro] = useState(null)
+
+  // Estados para assinaturas de responsáveis
+  const [assinaturasResponsaveis, setAssinaturasResponsaveis] = useState({})
 
   useEffect(() => {
     if (isAdmin) {
@@ -52,11 +62,12 @@ const AdminPanel = () => {
 
   const loadData = async () => {
     try {
-      const [usersData, tiposData, encamData, respData, camposData] = await Promise.all([
+      const [usersData, tiposData, encamData, respData, bairrosData, camposData] = await Promise.all([
         adminAPI.getUsers(),
         configAPI.getTiposConstrucao(),
         configAPI.getEncaminhamentos(),
         configAPI.getResponsaveis(),
+        adminAPI.getAllBairros(),
         configAPI.getCamposObrigatorios()
       ])
 
@@ -64,7 +75,17 @@ const AdminPanel = () => {
       setTiposConstrucao(tiposData)
       setEncaminhamentos(encamData)
       setResponsaveis(respData)
+      setBairros(bairrosData)
       setCamposObrigatorios(camposData)
+
+      // Carregar assinaturas dos responsáveis
+      const assinaturasData = {}
+      for (const responsavel of respData) {
+        if (responsavel.assinatura) {
+          assinaturasData[responsavel.id] = await assinaturasAPI.getPublicUrl(responsavel.assinatura)
+        }
+      }
+      setAssinaturasResponsaveis(assinaturasData)
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
       setError('Erro ao carregar dados administrativos')
@@ -185,6 +206,87 @@ const AdminPanel = () => {
       setSuccess('Configuração de campo atualizada')
     } catch (error) {
       setError('Erro ao atualizar configuração de campo')
+    }
+  }
+
+  // Funções para gerenciar bairros
+  const handleCreateBairro = async () => {
+    if (!newBairro.trim()) return
+
+    try {
+      const bairro = await adminAPI.createBairro(newBairro)
+      setBairros(prev => [...prev, bairro])
+      setNewBairro('')
+      setSuccess('Bairro criado com sucesso')
+    } catch (error) {
+      setError('Erro ao criar bairro')
+    }
+  }
+
+  const handleUpdateBairro = async (id, nome) => {
+    try {
+      const bairro = await adminAPI.updateBairro(id, nome)
+      setBairros(prev => prev.map(b => b.id === id ? bairro : b))
+      setEditingBairro(null)
+      setSuccess('Bairro atualizado com sucesso')
+    } catch (error) {
+      setError('Erro ao atualizar bairro')
+    }
+  }
+
+  const handleDeleteBairro = async (id) => {
+    if (!window.confirm('Tem certeza que deseja desativar este bairro?')) {
+      return
+    }
+
+    try {
+      await adminAPI.deleteBairro(id)
+      setBairros(prev => prev.map(b => b.id === id ? { ...b, ativo: false } : b))
+      setSuccess('Bairro desativado com sucesso')
+    } catch (error) {
+      setError('Erro ao desativar bairro')
+    }
+  }
+
+  // Funções para gerenciar assinaturas de responsáveis
+  const handleSaveAssinaturaResponsavel = async (responsavelId, dataURL) => {
+    try {
+      await adminAPI.saveAssinaturaResponsavel(responsavelId, dataURL)
+      setAssinaturasResponsaveis(prev => ({
+        ...prev,
+        [responsavelId]: dataURL
+      }))
+      setSuccess('Assinatura do responsável salva com sucesso')
+    } catch (error) {
+      setError('Erro ao salvar assinatura do responsável')
+    }
+  }
+
+  const handleDeleteAssinaturaResponsavel = async (responsavelId) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta assinatura?')) {
+      return
+    }
+
+    try {
+      await adminAPI.deleteAssinaturaResponsavel(responsavelId)
+      setAssinaturasResponsaveis(prev => {
+        const newState = { ...prev }
+        delete newState[responsavelId]
+        return newState
+      })
+      setSuccess('Assinatura do responsável excluída com sucesso')
+    } catch (error) {
+      setError('Erro ao excluir assinatura do responsável')
+    }
+  }
+
+  const handleToggleBairroAtivo = async (id, ativo) => {
+    try {
+      const bairro = await adminAPI.toggleBairroAtivo(id, ativo)
+      setBairros(prev => prev.map(b => b.id === id ? bairro : b))
+      setSuccess(`Bairro ${ativo ? 'ativado' : 'desativado'} com sucesso`)
+    } catch (error) {
+      setError('Erro ao alterar status do bairro')
     }
   }
 
@@ -394,7 +496,7 @@ const AdminPanel = () => {
             <CardHeader>
               <CardTitle>Responsáveis pela Vistoria</CardTitle>
               <CardDescription>
-                Gerencie os responsáveis disponíveis para vistoria
+                Gerencie os responsáveis disponíveis para vistoria e suas assinaturas
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -415,21 +517,32 @@ const AdminPanel = () => {
                 </Button>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {responsaveis.map((resp) => (
-                  <div key={resp.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <span className="font-medium">{resp.nome}</span>
-                      <span className="text-gray-600 ml-2">- {resp.cargo}</span>
+                  <div key={resp.id} className="border rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{resp.nome}</span>
+                        <span className="text-gray-600 ml-2">- {resp.cargo}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteResponsavel(resp.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteResponsavel(resp.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    
+                    <div className="border-t pt-4">
+                      <SignaturePadComponent
+                        title={`Assinatura de ${resp.nome}`}
+                        onSave={(dataURL) => handleSaveAssinaturaResponsavel(resp.id, dataURL)}
+                        initialSignature={assinaturasResponsaveis[resp.id]}
+                        disabled={loading}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -475,7 +588,104 @@ const AdminPanel = () => {
               ))}
             </CardContent>
           </Card>
+
+          {/* Gerenciar Bairros */}
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <MapPin className="h-5 w-5 inline mr-2" />
+                Gerenciar Bairros
+              </CardTitle>
+              <CardDescription>
+                Adicione, edite e gerencie os bairros disponíveis no sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Formulário para adicionar novo bairro */}
+              <div className="flex space-x-4">
+                <div className="flex-1">
+                  <Label htmlFor="newBairro">Novo Bairro</Label>
+                  <Input
+                    id="newBairro"
+                    value={newBairro}
+                    onChange={(e) => setNewBairro(e.target.value)}
+                    placeholder="Nome do bairro"
+                    onKeyPress={(e) => e.key === 'Enter' && handleCreateBairro()}
+                  />
+                </div>
+                <Button onClick={handleCreateBairro} disabled={!newBairro.trim()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar
+                </Button>
+              </div>
+
+              {/* Lista de bairros */}
+              <div className="space-y-2">
+                {bairros.map((bairro) => (
+                  <div key={bairro.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {editingBairro === bairro.id ? (
+                        <Input
+                          value={bairro.nome}
+                          onChange={(e) => setBairros(prev => 
+                            prev.map(b => b.id === bairro.id ? { ...b, nome: e.target.value } : b)
+                          )}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              handleUpdateBairro(bairro.id, bairro.nome)
+                            }
+                          }}
+                          onBlur={() => setEditingBairro(null)}
+                          autoFocus
+                        />
+                      ) : (
+                        <span 
+                          className={`font-medium ${!bairro.ativo ? 'text-gray-400 line-through' : ''}`}
+                        >
+                          {bairro.nome}
+                        </span>
+                      )}
+                      <Badge variant={bairro.ativo ? 'default' : 'secondary'}>
+                        {bairro.ativo ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={bairro.ativo}
+                        onCheckedChange={(checked) => handleToggleBairroAtivo(bairro.id, checked)}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingBairro(bairro.id)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteBairro(bairro.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {bairros.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Nenhum bairro cadastrado</p>
+                  <p className="text-sm">Adicione o primeiro bairro usando o formulário acima</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
+
       </Tabs>
     </div>
   )

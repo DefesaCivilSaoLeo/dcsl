@@ -58,6 +58,7 @@
     "react-router-dom": "^7.6.1",
     "react-signature-canvas": "1.1.0-alpha.2",
     "recharts": "^2.15.3",
+    "signature_pad": "^5.0.10",
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "^4.1.7",

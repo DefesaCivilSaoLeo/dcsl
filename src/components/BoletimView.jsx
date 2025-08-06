@@ -17,19 +17,21 @@ import {
   AlertCircle,
   CheckCircle,
   X,
-  Printer
+  Printer,
+  Edit3
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
-import { boletinsAPI, fotosAPI, formatBoletimNumber } from '../lib/api'
+import { boletinsAPI, fotosAPI, formatBoletimNumber, assinaturasAPI } from '../lib/api'
 import { useAuth } from '../hooks/useAuth.jsx'
 
 const BoletimView = ({ boletimId, onEdit, onBack }) => {
   const { user, isAdmin } = useAuth()
   const [boletim, setBoletim] = useState(null)
   const [fotos, setFotos] = useState([])
+  const [assinaturas, setAssinaturas] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [loadingFotos, setLoadingFotos] = useState(false)
@@ -45,14 +47,49 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
     setError('')
 
     try {
-      const data = await boletinsAPI.getById(boletimId)
-      setBoletim(data)
+      const data = await boletinsAPI.getById(boletimId); console.log("Boletim carregado no BoletimView:", data);
+      setBoletim(data);
 
       // Carregar fotos se existirem
       if (data.feito_registro) {
-        loadFotos()
+        loadFotos();
       }
-    } catch (error) {
+
+      // Carregar assinaturas
+      const assinaturasData = {};
+      
+      console.log("Dados de assinatura do solicitante:", data.assinatura_solicitante);
+      if (data.assinatura_solicitante) {
+        try {
+          assinaturasData.solicitante = await assinaturasAPI.getPublicUrl(data.assinatura_solicitante);
+          console.log("URL da assinatura do solicitante:", assinaturasData.solicitante);
+        } catch (err) {
+          console.error("Erro ao carregar assinatura do solicitante:", err);
+        }
+      }
+      
+      console.log("Dados do responsável 1:", data.responsaveis_1);
+      if (data.responsaveis_1?.assinatura) {
+        try {
+          assinaturasData.responsavel1 = await assinaturasAPI.getPublicUrl(data.responsaveis_1.assinatura);
+          console.log("URL da assinatura do responsável 1:", assinaturasData.responsavel1);
+        } catch (err) {
+          console.error("Erro ao carregar assinatura do responsável 1:", err);
+        }
+      }
+      
+      console.log("Dados do responsável 2:", data.responsaveis_2);
+      if (data.responsaveis_2?.assinatura) {
+        try {
+          assinaturasData.responsavel2 = await assinaturasAPI.getPublicUrl(data.responsaveis_2.assinatura);
+          console.log("URL da assinatura do responsável 2:", assinaturasData.responsavel2);
+        } catch (err) {
+          console.error("Erro ao carregar assinatura do responsável 2:", err);
+        }
+      }
+      
+      setAssinaturas(assinaturasData);
+      console.log("Assinaturas setadas no BoletimView:", assinaturasData); } catch (error) {
       console.error('Erro ao carregar boletim:', error)
       setError('Erro ao carregar dados do boletim')
     } finally {
@@ -279,9 +316,15 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
             </div>
           )}
 
-          {boletim.endereco && (
+          {(boletim.endereco_rua || boletim.endereco_numero || boletim.endereco_complemento || boletim.bairros?.nome) && (
             <div>
-              <span className="font-medium">Endereço:</span> {boletim.endereco}
+              <span className="font-medium">Endereço:</span>{' '}
+              {[
+                boletim.endereco_rua,
+                boletim.endereco_numero,
+                boletim.endereco_complemento,
+                boletim.bairros?.nome
+              ].filter(Boolean).join(', ')}
             </div>
           )}
 
@@ -487,19 +530,61 @@ const BoletimView = ({ boletimId, onEdit, onBack }) => {
             </div>
           </div>
 
-          {/* Espaço para assinaturas */}
+          {/* Assinaturas */}
           <div className="mt-8 print:mt-12">
-            <p className="text-center text-sm text-gray-500 mb-6 print:text-black">
-              Espaço para assinatura dos responsáveis
-            </p>
-            <div className="flex justify-between">
+            <h4 className="font-medium mb-4 print:text-black">Assinaturas</h4>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:gap-4">
+              {/* Assinatura do Solicitante */}
               <div className="text-center">
-                <div className="border-t border-gray-300 w-48 mx-auto print:border-black"></div>
-                <p className="mt-2 text-sm print:text-black">Responsável 1</p>
+                <div className="border border-gray-300 rounded-lg p-4 h-24 flex items-center justify-center bg-gray-50 print:border-black print:bg-white">
+                  {assinaturas.solicitante ? (
+                    <img 
+                      src={assinaturas.solicitante} 
+                      alt="Assinatura do Solicitante" 
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-sm print:text-black">Não assinado</span>
+                  )}
+                </div>
+                <p className="mt-2 text-sm font-medium print:text-black">Solicitante</p>
               </div>
+
+              {/* Assinatura do Responsável 1 */}
               <div className="text-center">
-                <div className="border-t border-gray-300 w-48 mx-auto print:border-black"></div>
-                <p className="mt-2 text-sm print:text-black">Responsável 2</p>
+                <div className="border border-gray-300 rounded-lg p-4 h-24 flex items-center justify-center bg-gray-50 print:border-black print:bg-white">
+                  {assinaturas.responsavel1 ? (
+                    <img 
+                      src={assinaturas.responsavel1} 
+                      alt="Assinatura do Responsável 1" 
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-sm print:text-black">Não assinado</span>
+                  )}
+                </div>
+                <p className="mt-2 text-sm font-medium print:text-black">
+                  {boletim.responsaveis?.nome || 'Responsável 1'}
+                </p>
+              </div>
+
+              {/* Assinatura do Responsável 2 */}
+              <div className="text-center">
+                <div className="border border-gray-300 rounded-lg p-4 h-24 flex items-center justify-center bg-gray-50 print:border-black print:bg-white">
+                  {assinaturas.responsavel2 ? (
+                    <img 
+                      src={assinaturas.responsavel2} 
+                      alt="Assinatura do Responsável 2" 
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-sm print:text-black">Não assinado</span>
+                  )}
+                </div>
+                <p className="mt-2 text-sm font-medium print:text-black">
+                  {boletim.responsaveis_2?.nome || 'Responsável 2'}
+                </p>
               </div>
             </div>
           </div>
